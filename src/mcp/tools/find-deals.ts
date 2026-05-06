@@ -8,7 +8,7 @@ import { decodeCursor, encodeCursor } from '../cursor.ts';
 export const name = 'find_deals';
 
 export const description =
-  'Search active merchant-verified deals. Filter by merchant slug, free-text query, country, category, and minimum cart total. Returns paginated results ordered by success rate.';
+  'Search active merchant-verified deals. Filter by merchant slug, free-text query, country, category, and minimum cart total. Returns paginated results ordered most-recently-ingested first.';
 
 export const inputSchema = z.object({
   merchant: z.string().optional(),
@@ -129,7 +129,14 @@ export async function handler(
     .from(deals)
     .innerJoin(merchants, eq(deals.merchantId, merchants.id))
     .where(and(...conditions))
-    .orderBy(sql`${deals.successRate} desc nulls last`, desc(deals.ingestedAt), desc(deals.id))
+    // NOTE: ordering is `(ingestedAt, id) DESC` only — this matches the keyset
+    // cursor payload exactly so pagination is deterministic. We previously
+    // primary-ordered by `successRate DESC NULLS LAST` but the cursor never
+    // carried `successRate`, so consecutive pages could skip or duplicate
+    // rows. For v1 we accept reverse-chronological ordering; quality ranking
+    // (e.g. success-rate weighting or a Haiku rerank) belongs in a follow-up
+    // pipeline stage that consumes this deterministic page list.
+    .orderBy(desc(deals.ingestedAt), desc(deals.id))
     .limit(input.limit + 1);
 
   const hasMore = rows.length > input.limit;

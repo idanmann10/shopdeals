@@ -100,13 +100,18 @@ describe('MCP server smoke test', () => {
   it('rejects get_price_history without prices:read scope', async () => {
     const { client, server } = await bootClientServer(ctxWith(['deals:read']));
     // Scope errors are surfaced as JSON-RPC errors (McpError) and the SDK
-    // re-throws them on the client side.
+    // re-throws them on the client side. The error code must be
+    // `InvalidRequest` (-32600), NOT `ConnectionClosed` (-32000) — the latter
+    // is a transport-level signal that would tear down the session.
     await expect(
       client.callTool({
         name: 'get_price_history',
         arguments: { asin: 'B0EXAMPLE0' },
       }),
-    ).rejects.toThrow(/prices:read/);
+    ).rejects.toMatchObject({
+      code: -32600,
+      message: expect.stringMatching(/prices:read/) as unknown as string,
+    });
     await client.close();
     await server.close();
   });

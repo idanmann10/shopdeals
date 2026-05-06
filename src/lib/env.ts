@@ -17,7 +17,7 @@ const envSchema = z.object({
   STRIPE_PRICE_PRO: z.string().optional(),
 
   FMTC_API_KEY: z.string().optional(),
-  FMTC_BASE_URL: z.string().url().default('https://account.fmtc.co/cp/api'),
+  FMTC_BASE_URL: z.string().url().default('https://s3.fmtc.co/api/v3/'),
 
   AWIN_API_TOKEN: z.string().optional(),
   AWIN_PUBLISHER_ID: z.string().optional(),

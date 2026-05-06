@@ -48,8 +48,14 @@ export async function handler(
   ctx: McpContext,
 ): Promise<GetPriceHistoryResult> {
   if (!ctx.scopes.includes(REQUIRED_SCOPE)) {
+    // NOTE: previously raised `ErrorCode.ConnectionClosed` (-32000), which the
+    // MCP SDK reserves for transport-level disconnects — clients react by
+    // tearing down the session. `MethodNotFound` is also wrong (the method
+    // exists; the caller just lacks scope). `InvalidRequest` (-32600) is the
+    // closest semantic fit in the JSON-RPC error space the SDK exposes for
+    // an authenticated-but-unauthorized request.
     throw new McpError(
-      ErrorCode.ConnectionClosed,
+      ErrorCode.InvalidRequest,
       `forbidden: ${REQUIRED_SCOPE} scope required`,
     );
   }

@@ -5,10 +5,14 @@ import type { Db } from '../../src/db/client.ts';
 
 /**
  * Build a minimal Db stub that records the sequence of calls. We only need to
- * cover three Drizzle operations:
+ * cover four Drizzle operations:
  *  1. SELECT to confirm the deal exists.
  *  2. INSERT into telemetry returning the generated id.
  *  3. UPDATE deals computing the rolling 30d success_rate.
+ *  4. A `transaction(...)` wrapper that runs the INSERT+UPDATE atomically.
+ *
+ * The stub records whether `transaction` was called and which operations ran
+ * inside vs outside the transaction context so we can assert atomicity.
  */
 function makeStubDb(opts: {
   dealExists?: boolean;
@@ -21,37 +25,72 @@ function makeStubDb(opts: {
 
   const insertedValues: Array<Record<string, unknown>> = [];
   const updateSetCalls: Array<Record<string, unknown>> = [];
+  // Track every operation in the order it ran. Ops that run inside the
+  // transaction lambda are tagged with `inTx: true`.
+  const ops: Array<{ kind: string; inTx: boolean }> = [];
 
-  const selectChain = {
-    from: () => selectChain,
-    where: () => selectChain,
-    limit: async () => (dealExists ? [{ id: 'deal-1' }] : []),
+  const buildSelectChain = (inTx: boolean) => {
+    const c = {
+      from: () => c,
+      where: () => c,
+      limit: async () => {
+        ops.push({ kind: 'select', inTx });
+        return dealExists ? [{ id: 'deal-1' }] : [];
+      },
+    };
+    return c;
   };
 
-  const insertChain = {
-    values: (v: Record<string, unknown>) => {
-      insertedValues.push(v);
-      return insertChain;
-    },
-    returning: async () => [{ id: telemetryId }],
+  const buildInsertChain = (inTx: boolean) => {
+    const c = {
+      values: (v: Record<string, unknown>) => {
+        insertedValues.push(v);
+        return c;
+      },
+      returning: async () => {
+        ops.push({ kind: 'insert', inTx });
+        return [{ id: telemetryId }];
+      },
+    };
+    return c;
   };
 
-  const updateChain = {
-    set: (s: Record<string, unknown>) => {
-      updateSetCalls.push(s);
-      return updateChain;
-    },
-    where: () => updateChain,
-    returning: async () => [{ successRate: newSuccessRate }],
+  const buildUpdateChain = (inTx: boolean) => {
+    const c = {
+      set: (s: Record<string, unknown>) => {
+        updateSetCalls.push(s);
+        return c;
+      },
+      where: () => c,
+      returning: async () => {
+        ops.push({ kind: 'update', inTx });
+        return [{ successRate: newSuccessRate }];
+      },
+    };
+    return c;
   };
+
+  const transaction = vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      select: () => buildSelectChain(true),
+      insert: () => buildInsertChain(true),
+      update: () => buildUpdateChain(true),
+      execute: async () => {
+        ops.push({ kind: 'execute', inTx: true });
+        return [];
+      },
+    };
+    return cb(tx);
+  });
 
   const db = {
-    select: () => selectChain,
-    insert: () => insertChain,
-    update: () => updateChain,
+    select: () => buildSelectChain(false),
+    insert: () => buildInsertChain(false),
+    update: () => buildUpdateChain(false),
+    transaction,
   } as unknown as Db;
 
-  return { db, insertedValues, updateSetCalls };
+  return { db, insertedValues, updateSetCalls, ops, transaction };
 }
 
 function ctxWith(db: Db): McpContext {
@@ -106,6 +145,40 @@ describe('report_code_result tool', () => {
     await expect(handler(input, ctxWith(stub.db))).rejects.toMatchObject({
       code: -32602,
     });
+  });
+
+  it('runs INSERT + UPDATE inside ctx.db.transaction(...)', async () => {
+    const stub = makeStubDb({});
+    const input = inputSchema.parse({
+      dealId: '44444444-4444-4444-4444-444444444444',
+      worked: true,
+    });
+    await handler(input, ctxWith(stub.db));
+
+    // The handler must invoke `db.transaction(...)` exactly once.
+    expect(stub.transaction).toHaveBeenCalledTimes(1);
+    expect(stub.transaction.mock.calls[0]![0]).toBeInstanceOf(Function);
+
+    // Both the INSERT and the UPDATE must run via the tx instance, not the
+    // top-level db. The initial deal-exists SELECT may run outside the tx.
+    const insertOps = stub.ops.filter((o) => o.kind === 'insert');
+    const updateOps = stub.ops.filter((o) => o.kind === 'update');
+    expect(insertOps).toHaveLength(1);
+    expect(updateOps).toHaveLength(1);
+    expect(insertOps[0]!.inTx).toBe(true);
+    expect(updateOps[0]!.inTx).toBe(true);
+  });
+
+  it('returns newSuccessRate from the UPDATE RETURNING result', async () => {
+    const stub = makeStubDb({ newSuccessRate: 0.873 });
+    const input = inputSchema.parse({
+      dealId: '55555555-5555-5555-5555-555555555555',
+      worked: true,
+    });
+    const out = await handler(input, ctxWith(stub.db));
+    // The value originates from the tx update's RETURNING clause and must be
+    // surfaced verbatim on the response payload.
+    expect(out.newSuccessRate).toBe(0.873);
   });
 
   // Smoke check that vi is wired up in case this file is run in isolation.
