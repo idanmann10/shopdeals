@@ -1,0 +1,94 @@
+# fly.toml — Snap-AI MCP server
+#
+# Deploy:    fly deploy
+# Logs:      fly logs
+# Secrets:   fly secrets set DATABASE_URL=... CLERK_SECRET_KEY=... ...
+#
+# Postgres lives on Neon (external), so no [[mounts]] or [[vm.volumes]] block
+# is needed here.
+
+app            = "snap-ai-mcp"
+primary_region = "iad"
+
+[build]
+
+# Run drizzle migrations against Neon before the new image takes traffic.
+[deploy]
+  release_command = "npm run db:migrate"
+
+# The web app — the MCP HTTP server, Stripe webhook, and /healthz all live
+# inside the same Hono process.
+[processes]
+  app = "node dist/index.js"
+
+# NOTE on the ingestion cron:
+#   We deliberately do NOT register a `cron` process here, because Fly would
+#   keep it always-on. Instead, schedule a one-shot machine that runs the
+#   ingest script every 15 minutes:
+#
+#       fly machines run \
+#         --schedule="*/15 * * * *" \
+#         --region iad \
+#         --command "node dist/cron/ingest.js" \
+#         registry.fly.io/snap-ai-mcp:latest
+#
+#   The schedule machine reuses the same image we deploy here.
+
+[env]
+  NODE_ENV  = "production"
+  PORT      = "3000"
+  LOG_LEVEL = "info"
+
+[http_service]
+  internal_port       = 3000
+  force_https         = true
+  auto_stop_machines  = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes           = ["app"]
+
+  [http_service.concurrency]
+    type       = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+# Explicit port mapping — redundant with [http_service] but documents intent
+# for anyone reading the file.
+[[services]]
+  protocol      = "tcp"
+  internal_port = 3000
+  processes     = ["app"]
+
+  [[services.ports]]
+    port        = 80
+    handlers    = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port     = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type       = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+# Liveness / readiness — must match the route defined in src/index.ts.
+[checks]
+  [checks.healthz]
+    type          = "http"
+    port          = 3000
+    method        = "get"
+    path          = "/healthz"
+    interval      = "15s"
+    timeout       = "5s"
+    grace_period  = "10s"
+    protocol      = "http"
+
+[[vm]]
+  size                 = "shared-cpu-1x"
+  memory               = "512mb"
+  cpus                 = 1
+  cpu_kind             = "shared"
+  auto_stop_machines   = "stop"
+  min_machines_running = 1

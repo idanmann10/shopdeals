@@ -1,0 +1,28 @@
+{
+  "PromoCodes": [
+    {
+      "Id": "pc-9001-a",
+      "Code": "TEA25",
+      "Description": "25% off your first tea subscription order",
+      "StartDate": "2026-04-01T00:00:00Z",
+      "EndDate": "2026-09-30T00:00:00Z",
+      "LandingPageUrl": "https://impact.example/track?p=tea25",
+      "CampaignName": "GreenLeaf Tea — General",
+      "AdvertiserName": "GreenLeaf Tea Co",
+      "CampaignId": 9001,
+      "PromoType": "PROMOCODE"
+    },
+    {
+      "Id": "pc-9001-b",
+      "Code": "FREESHIP",
+      "Description": "Free shipping on orders over $35",
+      "StartDate": "2026-04-01T00:00:00Z",
+      "EndDate": "2026-12-31T00:00:00Z",
+      "LandingPageUrl": "https://impact.example/track?p=freeship",
+      "CampaignName": "GreenLeaf Tea — General",
+      "AdvertiserName": "GreenLeaf Tea Co",
+      "CampaignId": 9001,
+      "PromoType": "PROMOCODE"
+    }
+  ]
+}

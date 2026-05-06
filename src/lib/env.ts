@@ -1,0 +1,55 @@
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3000),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+
+  DATABASE_URL: z.string().url(),
+
+  CLERK_SECRET_KEY: z.string().min(1).optional(),
+  CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
+
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  STRIPE_PRICE_FREE: z.string().optional(),
+  STRIPE_PRICE_STARTER: z.string().optional(),
+  STRIPE_PRICE_PRO: z.string().optional(),
+
+  FMTC_API_KEY: z.string().optional(),
+  FMTC_BASE_URL: z.string().url().default('https://account.fmtc.co/cp/api'),
+
+  AWIN_API_TOKEN: z.string().optional(),
+  AWIN_PUBLISHER_ID: z.string().optional(),
+
+  IMPACT_ACCOUNT_SID: z.string().optional(),
+  IMPACT_AUTH_TOKEN: z.string().optional(),
+
+  KEEPA_API_KEY: z.string().optional(),
+
+  VOYAGE_API_KEY: z.string().optional(),
+
+  MCP_PUBLIC_URL: z.string().url().default('http://localhost:3000'),
+  MCP_OAUTH_ISSUER: z.string().url().default('http://localhost:3000'),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+let cached: Env | undefined;
+
+export function env(): Env {
+  if (cached) return cached;
+  const parsed = envSchema.safeParse(process.env);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
+    throw new Error(`Invalid environment variables:\n${issues}`);
+  }
+  cached = parsed.data;
+  return cached;
+}
+
+export function resetEnvCache(): void {
+  cached = undefined;
+}

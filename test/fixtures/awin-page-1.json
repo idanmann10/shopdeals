@@ -1,0 +1,46 @@
+{
+  "data": [
+    {
+      "promotionId": 50001,
+      "advertiser": {
+        "id": 12345,
+        "name": "Northwind Threads"
+      },
+      "title": "15% off all jackets",
+      "description": "Get 15% off our entire jacket collection. Limited time.",
+      "voucher": {
+        "code": "JACKET15"
+      },
+      "type": "voucher",
+      "startDate": "2026-04-15T00:00:00Z",
+      "endDate": "2026-08-30T23:59:59Z",
+      "urlClickThrough": "https://awin1.example/cread.php?p=50001",
+      "regions": [
+        { "countryCode": "GB" },
+        { "countryCode": "IE" }
+      ]
+    },
+    {
+      "promotionId": 50002,
+      "advertiser": {
+        "id": 67890,
+        "name": "Solar Energy Direct"
+      },
+      "title": "Save $50 on home solar audit",
+      "description": "Save $50 when you book a home solar audit through Solar Energy Direct.",
+      "voucher": {
+        "code": "SOLAR50"
+      },
+      "type": "voucher",
+      "startDate": "2026-03-01T00:00:00Z",
+      "endDate": "2026-12-31T00:00:00Z",
+      "urlClickThrough": "https://awin1.example/cread.php?p=50002",
+      "regions": [{ "countryCode": "US" }]
+    }
+  ],
+  "pagination": {
+    "total": 2,
+    "currentPage": 1,
+    "pageSize": 100
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "Campaigns": [
+    {
+      "CampaignId": 9001,
+      "CampaignName": "GreenLeaf Tea — General",
+      "AdvertiserName": "GreenLeaf Tea Co",
+      "AdvertiserId": 4001
+    },
+    {
+      "CampaignId": 9002,
+      "CampaignName": "PixelPet Photography — General",
+      "AdvertiserName": "PixelPet Photography",
+      "AdvertiserId": 4002
+    }
+  ],
+  "@page": 1,
+  "@total": 2,
+  "@numpages": 1
+}

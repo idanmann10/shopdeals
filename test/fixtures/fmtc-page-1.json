@@ -1,0 +1,57 @@
+{
+  "coupons": [
+    {
+      "id": "fmtc-1001",
+      "network": "FMTC",
+      "advertiserId": 555,
+      "advertiserName": "Acme Outdoor Supply",
+      "advertiserHomepage": "https://www.acmeoutdoor.example",
+      "code": "SAVE20",
+      "label": "20% off sitewide",
+      "type": "Code",
+      "description": "Take 20% off your entire order at Acme Outdoor Supply.",
+      "restrictions": "One use per customer.",
+      "startDate": "2026-04-01T00:00:00Z",
+      "endDate": "2026-12-31T23:59:59Z",
+      "exclusive": true,
+      "freshReachDate": "2026-05-01T00:00:00Z",
+      "deepLink": "https://track.example/click?id=1001",
+      "currency": "USD",
+      "country": "US,CA"
+    },
+    {
+      "id": "fmtc-1002",
+      "network": "FMTC",
+      "advertiserId": 777,
+      "advertiserName": "Bookworm Reads",
+      "advertiserHomepage": "https://www.bookwormreads.example",
+      "code": "",
+      "label": "Free shipping on orders over $25",
+      "type": "Deal",
+      "description": "Free shipping promotion at Bookworm Reads.",
+      "restrictions": null,
+      "startDate": "2026-05-01T00:00:00Z",
+      "endDate": "2026-06-30T23:59:59Z",
+      "deepLink": "https://track.example/click?id=1002",
+      "currency": "USD",
+      "country": "US"
+    },
+    {
+      "id": "fmtc-1003",
+      "network": "FMTC",
+      "advertiserId": 888,
+      "advertiserName": "Vintage Vinyl Co",
+      "advertiserHomepage": "https://www.vintagevinyl.example",
+      "code": "RETRO10",
+      "label": "$10 off any order",
+      "type": "Code",
+      "description": "Save $10 instantly on any order at Vintage Vinyl.",
+      "restrictions": "Min $50 purchase.",
+      "startDate": "2025-12-01T00:00:00Z",
+      "endDate": "2026-01-15T00:00:00Z",
+      "deepLink": "https://track.example/click?id=1003",
+      "currency": "USD",
+      "country": "US"
+    }
+  ]
+}

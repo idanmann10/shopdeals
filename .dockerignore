@@ -1,0 +1,25 @@
+node_modules
+dist
+coverage
+.git
+.github
+.vscode
+.idea
+.DS_Store
+
+# Local env files must never end up in the image.
+.env
+.env.*
+!.env.example
+
+# Tests are not needed at runtime.
+test
+
+# Markdown noise — keep README only.
+*.md
+!README.md
+
+# Editor / OS junk
+*.log
+*.tgz
+npm-debug.log*

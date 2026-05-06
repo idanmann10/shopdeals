@@ -1,0 +1,59 @@
+{
+  "name": "snap-ai",
+  "version": "0.1.0",
+  "description": "Open-source MCP server for finding deals, coupons, and cashback. Aggregates merchant-verified affiliate-network promo codes for AI agents.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/idanmann10/snap-ai.git"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio",
+    "ingest": "tsx src/cron/ingest.ts",
+    "mcp:smoke": "tsx test/smoke.ts"
+  },
+  "dependencies": {
+    "@clerk/backend": "^1.21.0",
+    "@hono/node-server": "^1.13.0",
+    "@hono/zod-validator": "^0.4.0",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "drizzle-orm": "^0.36.0",
+    "drizzle-zod": "^0.5.1",
+    "hono": "^4.6.0",
+    "p-limit": "^6.1.0",
+    "pg": "^8.13.0",
+    "pino": "^9.5.0",
+    "stripe": "^17.4.0",
+    "voyageai": "^0.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "drizzle-kit": "^0.28.0",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "msw": "^2.6.0",
+    "pino-pretty": "^11.3.0",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
