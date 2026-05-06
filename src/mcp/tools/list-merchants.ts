@@ -70,12 +70,15 @@ export async function handler(
     );
   }
 
-  // Correlated EXISTS subquery for `hasActiveDeals`.
+  // Correlated EXISTS subquery for `hasActiveDeals`. Uses fully-qualified
+  // Drizzle column references on both the inner table and the outer `merchants`
+  // table — relying on a SQL alias here was producing always-false results
+  // under certain Postgres configurations.
   const hasActiveDealsExpr = sql<boolean>`EXISTS (
-    SELECT 1 FROM ${deals} d
-    WHERE d.merchant_id = ${merchants.id}
-      AND d.is_active = true
-      AND (d.expires_at IS NULL OR d.expires_at > now())
+    SELECT 1 FROM ${deals}
+    WHERE ${deals.merchantId} = ${merchants.id}
+      AND ${deals.isActive} = true
+      AND (${deals.expiresAt} IS NULL OR ${deals.expiresAt} > now())
   )`;
 
   const whereExpr = conditions.length > 0 ? and(...conditions) : undefined;
