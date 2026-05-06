@@ -35,10 +35,19 @@ export default [
         URL: 'readonly',
         URLSearchParams: 'readonly',
         fetch: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        Headers: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        crypto: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        globalThis: 'readonly',
       },
     },
     plugins: {
@@ -46,6 +55,9 @@ export default [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
+      // TypeScript already enforces this; the lint check produces false
+      // positives for ambient Node 22 / WHATWG globals.
+      'no-undef': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',

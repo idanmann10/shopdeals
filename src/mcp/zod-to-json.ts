@@ -8,7 +8,7 @@
 
 import { z } from 'zod';
 
-export interface JsonSchemaObject {
+export interface JsonSchemaObject extends AnyJsonSchema {
   type: 'object';
   properties?: Record<string, unknown>;
   required?: string[];
@@ -16,7 +16,7 @@ export interface JsonSchemaObject {
   description?: string;
 }
 
-interface AnyJsonSchema {
+export interface AnyJsonSchema {
   [k: string]: unknown;
 }
 
@@ -34,7 +34,6 @@ function unwrap(schema: z.ZodTypeAny): {
   // Strip wrapping containers we ignore for JSON Schema generation.
   // ZodEffects (refine/transform) and ZodOptional/ZodDefault are common.
   // We loop because these can nest.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (let i = 0; i < 10; i += 1) {
     const def = (cur as unknown as { _def?: { typeName?: string; innerType?: z.ZodTypeAny; defaultValue?: () => unknown; schema?: z.ZodTypeAny } })._def;
     if (!def) break;

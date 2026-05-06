@@ -6,7 +6,8 @@
     "rootDir": "src",
     "declaration": false,
     "sourceMap": true,
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*.test.ts"]

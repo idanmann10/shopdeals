@@ -150,11 +150,16 @@ export class FmtcAdapter implements SourceAdapter {
           );
           return;
         }
-        coupons = Array.isArray(parsed.data)
-          ? parsed.data
-          : 'coupons' in parsed.data
-            ? parsed.data.coupons
-            : parsed.data.data;
+        const data = parsed.data;
+        if (Array.isArray(data)) {
+          coupons = data as FmtcCoupon[];
+        } else if ('coupons' in data && Array.isArray((data as { coupons?: unknown }).coupons)) {
+          coupons = (data as { coupons: FmtcCoupon[] }).coupons;
+        } else if ('data' in data && Array.isArray((data as { data?: unknown }).data)) {
+          coupons = (data as { data: FmtcCoupon[] }).data;
+        } else {
+          coupons = [];
+        }
       } catch (err) {
         log.error(
           { network: this.network, page, err: err instanceof Error ? err.message : String(err) },
