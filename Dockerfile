@@ -15,6 +15,11 @@ COPY drizzle.config.ts ./
 COPY src ./src
 RUN npm run build
 
+# The TypeScript build doesn't carry .sql files. Migration assets live at
+# src/db/migrations/ — copy them next to the built migrate.js so the runtime
+# can resolve them via __dirname.
+RUN cp -r src/db/migrations dist/db/migrations
+
 # Prune dev dependencies for the runtime stage.
 RUN npm ci --omit=dev && npm cache clean --force
 
