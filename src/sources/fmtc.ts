@@ -1,18 +1,29 @@
 /**
- * FMTC (FlexMyDeals) source adapter.
+ * FMTC source adapter (v3 API).
  *
- * FMTC publishes coupons via their Coupon API at
- * https://account.fmtc.co/cp/api. The exact response shape varies a little
- * by account, but the documented coupon record exposes:
- *   id, network, advertiserId, advertiserName, advertiserHomepage,
- *   code, label, type ("Code"|"Deal"|...), description, restrictions,
- *   startDate, endDate, exclusive, freshReachDate, deepLink,
- *   currency, country
+ * Endpoint base: `https://s3.fmtc.co/api/v3/`. The full coupon listing lives
+ * at `${base}/coupons` and uses snake_case fields throughout. Pagination is
+ * driven by `?page=N&page_size=200`; the response includes a sibling
+ * `meta`/`pagination` block with `current_page`, `last_page`, `total`, and
+ * `per_page` so we can stop cleanly without falling back to short-page
+ * heuristics.
  *
- * Pagination uses `?page=N&per_page=200`. We follow until the server returns
- * an empty array or `coupons` is missing.
+ * Auth: FMTC v3 historically accepted the API key as a query param
+ * (`?api_key=...`). The published v3 spec is paywalled, so as a best-effort
+ * we ALSO send `Authorization: Bearer ${apiKey}` — if v3 rejects the query
+ * param the header will keep us authenticated. Both are fine to send; FMTC
+ * has never been picky about extra headers.
  *
- * Auth is a query-param API key (`api_key=...`), per FMTC's docs.
+ * TODO(fmtc-v3): once we have first-hand access to the published v3 docs,
+ * confirm whether the auth scheme is bearer-only or query-only and drop the
+ * other to reduce log surface.
+ *
+ * Coupon record (snake_case, per v3):
+ *   id, network, advertiser_id, advertiser_name, advertiser_homepage,
+ *   coupon_code, label, type ("Code"|"Deal"|...), description, restrictions,
+ *   start_date, end_date, exclusive, fresh_reach_date, deep_link, currency,
+ *   country, coupon_code_on_page (bool), code_verified_at (ISO),
+ *   link_verified_at (ISO).
  */
 import { z } from 'zod';
 import { env } from '../lib/env.ts';
@@ -52,44 +63,78 @@ const FmtcCouponSchema = z
   .object({
     id: z.union([z.string(), z.number()]),
     network: z.string().nullish(),
-    advertiserId: z.union([z.string(), z.number()]).nullish(),
-    advertiserName: z.string().nullish(),
-    advertiserHomepage: z.string().nullish(),
+    advertiser_id: z.union([z.string(), z.number()]).nullish(),
+    advertiser_name: z.string().nullish(),
+    advertiser_homepage: z.string().nullish(),
+    // v3 calls the code field `coupon_code`; keep `code` as a fallback for
+    // any older deployment that still emits the legacy name.
+    coupon_code: z.string().nullish(),
     code: z.string().nullish(),
     label: z.string().nullish(),
     type: z.string().nullish(),
     description: z.string().nullish(),
     restrictions: z.string().nullish(),
-    startDate: z.string().nullish(),
-    endDate: z.string().nullish(),
+    start_date: z.string().nullish(),
+    end_date: z.string().nullish(),
     exclusive: z.union([z.boolean(), z.number(), z.string()]).nullish(),
-    freshReachDate: z.string().nullish(),
-    deepLink: z.string().nullish(),
+    fresh_reach_date: z.string().nullish(),
+    deep_link: z.string().nullish(),
     currency: z.string().nullish(),
     country: z.string().nullish(),
+    coupon_code_on_page: z.union([z.boolean(), z.number(), z.string()]).nullish(),
+    code_verified_at: z.string().nullish(),
+    link_verified_at: z.string().nullish(),
   })
   .passthrough();
 
 export type FmtcCoupon = z.infer<typeof FmtcCouponSchema>;
 
+const FmtcPaginationSchema = z
+  .object({
+    current_page: z.union([z.string(), z.number()]).nullish(),
+    last_page: z.union([z.string(), z.number()]).nullish(),
+    total: z.union([z.string(), z.number()]).nullish(),
+    per_page: z.union([z.string(), z.number()]).nullish(),
+  })
+  .passthrough();
+
 /**
- * FMTC sometimes wraps the array in `{ coupons: [...] }`, sometimes in
- * `{ data: [...] }`, and sometimes returns a bare array. Accept all three.
+ * FMTC v3 wraps the array in `{ data: [...], meta: {...} }` (Laravel-style
+ * paginators). Older deployments occasionally use `{ coupons: [...] }` or a
+ * bare array, so we still accept those for resilience.
  */
 const FmtcResponseSchema = z.union([
-  z.object({ coupons: z.array(FmtcCouponSchema) }).passthrough(),
-  z.object({ data: z.array(FmtcCouponSchema) }).passthrough(),
+  z
+    .object({
+      data: z.array(FmtcCouponSchema),
+      meta: FmtcPaginationSchema.nullish(),
+      pagination: FmtcPaginationSchema.nullish(),
+    })
+    .passthrough(),
+  z
+    .object({
+      coupons: z.array(FmtcCouponSchema),
+      meta: FmtcPaginationSchema.nullish(),
+      pagination: FmtcPaginationSchema.nullish(),
+    })
+    .passthrough(),
   z.array(FmtcCouponSchema),
 ]);
 
 export interface FmtcAdapterOptions {
   baseUrl?: string;
   apiKey?: string;
-  perPage?: number;
+  pageSize?: number;
   /** Mostly for tests — inject a fetch impl. Defaults to global fetch. */
   fetchImpl?: typeof fetch;
   /** Maximum pages to fetch in one run (safety cap). */
   maxPages?: number;
+}
+
+function toIntOrUndefined(v: unknown): number | undefined {
+  if (v == null) return undefined;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 export class FmtcAdapter implements SourceAdapter {
@@ -97,7 +142,7 @@ export class FmtcAdapter implements SourceAdapter {
 
   private readonly baseUrl: string;
   private readonly apiKey: string;
-  private readonly perPage: number;
+  private readonly pageSize: number;
   private readonly fetchImpl: typeof fetch;
   private readonly maxPages: number;
 
@@ -109,12 +154,12 @@ export class FmtcAdapter implements SourceAdapter {
         return undefined;
       }
     })();
-    this.baseUrl = (opts.baseUrl ?? e?.FMTC_BASE_URL ?? 'https://account.fmtc.co/cp/api').replace(
+    this.baseUrl = (opts.baseUrl ?? e?.FMTC_BASE_URL ?? 'https://s3.fmtc.co/api/v3/').replace(
       /\/+$/,
       ''
     );
     this.apiKey = opts.apiKey ?? e?.FMTC_API_KEY ?? '';
-    this.perPage = Math.max(1, Math.min(500, opts.perPage ?? 200));
+    this.pageSize = Math.max(1, Math.min(500, opts.pageSize ?? 200));
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.maxPages = Math.max(1, opts.maxPages ?? 200);
   }
@@ -129,15 +174,24 @@ export class FmtcAdapter implements SourceAdapter {
       return;
     }
 
+    let lastPage: number | undefined;
+
     for (let page = 1; page <= this.maxPages; page += 1) {
       const url = `${this.baseUrl}/coupons?api_key=${encodeURIComponent(
         this.apiKey
-      )}&page=${page}&per_page=${this.perPage}`;
+      )}&page=${page}&page_size=${this.pageSize}`;
       let coupons: FmtcCoupon[];
       try {
         const res = await fetchJsonWithTimeout(
           url,
-          { headers: { Accept: 'application/json' } },
+          {
+            headers: {
+              Accept: 'application/json',
+              // Best-effort: also pass the key as a bearer header. See file
+              // header for rationale; safe to send both.
+              Authorization: `Bearer ${this.apiKey}`,
+            },
+          },
           30_000,
           this.fetchImpl
         );
@@ -153,10 +207,22 @@ export class FmtcAdapter implements SourceAdapter {
         const data = parsed.data;
         if (Array.isArray(data)) {
           coupons = data as FmtcCoupon[];
-        } else if ('coupons' in data && Array.isArray((data as { coupons?: unknown }).coupons)) {
-          coupons = (data as { coupons: FmtcCoupon[] }).coupons;
         } else if ('data' in data && Array.isArray((data as { data?: unknown }).data)) {
           coupons = (data as { data: FmtcCoupon[] }).data;
+          const meta =
+            (data as { meta?: unknown; pagination?: unknown }).meta ??
+            (data as { meta?: unknown; pagination?: unknown }).pagination;
+          if (meta && typeof meta === 'object') {
+            lastPage = toIntOrUndefined((meta as { last_page?: unknown }).last_page) ?? lastPage;
+          }
+        } else if ('coupons' in data && Array.isArray((data as { coupons?: unknown }).coupons)) {
+          coupons = (data as { coupons: FmtcCoupon[] }).coupons;
+          const meta =
+            (data as { meta?: unknown; pagination?: unknown }).meta ??
+            (data as { meta?: unknown; pagination?: unknown }).pagination;
+          if (meta && typeof meta === 'object') {
+            lastPage = toIntOrUndefined((meta as { last_page?: unknown }).last_page) ?? lastPage;
+          }
         } else {
           coupons = [];
         }
@@ -178,8 +244,16 @@ export class FmtcAdapter implements SourceAdapter {
         if (mapped) yield mapped;
       }
 
-      // Short-page heuristic: server returned fewer than per_page; assume done.
-      if (coupons.length < this.perPage) {
+      // Prefer the server-reported `last_page` to decide when to stop. Fall
+      // back to the short-page heuristic if no metadata was present.
+      if (lastPage !== undefined && page >= lastPage) {
+        log.debug(
+          { network: this.network, page, lastPage },
+          'FMTC: reached last_page from pagination metadata, stopping'
+        );
+        return;
+      }
+      if (lastPage === undefined && coupons.length < this.pageSize) {
         log.debug(
           { network: this.network, page, count: coupons.length },
           'FMTC: short page, stopping'
@@ -191,17 +265,17 @@ export class FmtcAdapter implements SourceAdapter {
 }
 
 /**
- * Map a single FMTC coupon record to our canonical `RawDealInput` shape.
+ * Map a single FMTC v3 coupon record to our canonical `RawDealInput` shape.
  * Returns `null` for records missing the bare-minimum fields (id, advertiser).
  */
 export function mapFmtcCoupon(c: FmtcCoupon): RawDealInput | null {
   const sourceId = String(c.id ?? '').trim();
   if (!sourceId) return null;
 
-  const advertiserName = (c.advertiserName ?? '').trim();
+  const advertiserName = (c.advertiser_name ?? '').trim();
   if (!advertiserName) return null;
 
-  const code = (c.code ?? '').trim();
+  const code = (c.coupon_code ?? c.code ?? '').trim();
   const titleRaw = (c.label ?? c.description ?? code ?? '').trim();
   const title = titleRaw.length > 0 ? titleRaw : `${advertiserName} offer`;
 
@@ -211,8 +285,8 @@ export function mapFmtcCoupon(c: FmtcCoupon): RawDealInput | null {
   const text = `${c.label ?? ''} ${c.description ?? ''}`.trim();
   const parsed = parseDiscountFromText(text);
 
-  const expiresAt = toDate(c.endDate);
-  const startsAt = toDate(c.startDate);
+  const startsAt = toDate(c.start_date);
+  const expiresAt = toDate(c.end_date);
 
   const countryStr = (c.country ?? '').trim();
   const geoScope =
@@ -223,7 +297,22 @@ export function mapFmtcCoupon(c: FmtcCoupon): RawDealInput | null {
           .filter((s) => /^[A-Z]{2}$/.test(s))
       : undefined;
 
-  const advertiserDomain = extractHost(c.advertiserHomepage ?? '');
+  const advertiserDomain = extractHost(c.advertiser_homepage ?? '');
+
+  const sourceMeta: Record<string, unknown> = { raw: c };
+  if (c.network) sourceMeta['network'] = c.network;
+  if (c.advertiser_id !== undefined && c.advertiser_id !== null) {
+    sourceMeta['advertiserId'] = String(c.advertiser_id);
+  }
+  if (c.exclusive !== undefined && c.exclusive !== null) {
+    sourceMeta['exclusive'] = c.exclusive;
+  }
+  if (c.coupon_code_on_page !== undefined && c.coupon_code_on_page !== null) {
+    sourceMeta['couponCodeOnPage'] = c.coupon_code_on_page;
+  }
+  if (c.code_verified_at) sourceMeta['codeVerifiedAt'] = c.code_verified_at;
+  if (c.link_verified_at) sourceMeta['linkVerifiedAt'] = c.link_verified_at;
+  if (c.fresh_reach_date) sourceMeta['freshReachDate'] = c.fresh_reach_date;
 
   const out: RawDealInput = {
     sourceNetwork: 'fmtc',
@@ -232,19 +321,12 @@ export function mapFmtcCoupon(c: FmtcCoupon): RawDealInput | null {
       slug: slugify(advertiserName),
       displayName: advertiserName,
       ...(advertiserDomain ? { domains: [advertiserDomain] } : {}),
-      ...(c.advertiserHomepage ? { homepageUrl: c.advertiserHomepage } : {}),
+      ...(c.advertiser_homepage ? { homepageUrl: c.advertiser_homepage } : {}),
     },
     kind,
     title: title.slice(0, 512),
     discountType: parsed.discountType ?? 'unknown',
-    sourceMeta: {
-      raw: c,
-      ...(c.network ? { network: c.network } : {}),
-      ...(c.advertiserId !== undefined && c.advertiserId !== null
-        ? { advertiserId: String(c.advertiserId) }
-        : {}),
-      ...(c.exclusive !== undefined && c.exclusive !== null ? { exclusive: c.exclusive } : {}),
-    },
+    sourceMeta,
   };
   if (code.length > 0) out.code = code;
   if (c.description) out.description = c.description;
@@ -253,7 +335,7 @@ export function mapFmtcCoupon(c: FmtcCoupon): RawDealInput | null {
   if (geoScope && geoScope.length > 0) out.geoScope = geoScope;
   if (startsAt) out.startsAt = startsAt;
   if (expiresAt) out.expiresAt = expiresAt;
-  if (c.deepLink) out.deeplink = c.deepLink;
+  if (c.deep_link) out.deeplink = c.deep_link;
   out.attributionSource = 'fmtc';
   return out;
 }

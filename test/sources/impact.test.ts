@@ -1,6 +1,7 @@
 /**
- * Unit tests for the Impact.com adapter. The fake fetch routes the campaigns
- * URL to one fixture and per-campaign promo-code URLs to others.
+ * Unit tests for the Impact.com adapter. The fake fetch routes the flat
+ * PromoCodes endpoint to two sequential fixture pages and asserts the
+ * adapter follows `@nextpageuri` for pagination.
  */
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -21,63 +22,36 @@ async function readFixture(name: string): Promise<unknown> {
 }
 
 interface RouteState {
-  campaignsCalls: number;
-  promoCalls: Record<string, number>;
+  calls: Array<{ url: string; init: RequestInit | undefined }>;
 }
 
 async function makeFakeFetch(): Promise<{ impl: typeof fetch; state: RouteState }> {
-  const campaigns = await readFixture('impact-campaigns.json');
-  const pc9001 = await readFixture('impact-promocodes-9001.json');
-  const pc9002 = await readFixture('impact-promocodes-9002.json');
-
-  const state: RouteState = { campaignsCalls: 0, promoCalls: {} };
+  const page1 = await readFixture('impact-promocodes-page-1.json');
+  const page2 = await readFixture('impact-promocodes-page-2.json');
+  const state: RouteState = { calls: [] };
 
   const fakeFetch = vi.fn(async (url: unknown, init?: unknown) => {
     const u = String(url);
-    // Verify auth header is present and Basic.
+    state.calls.push({ url: u, init: init as RequestInit | undefined });
+
     const headers = (init as { headers?: Record<string, string> } | undefined)?.headers ?? {};
     const auth = (headers as Record<string, string>)['Authorization'] ?? '';
     if (!auth.startsWith('Basic ')) {
       return new Response('forbidden', { status: 401 });
     }
 
-    if (u.endsWith('/Campaigns') || /\/Campaigns\?/.test(u)) {
-      state.campaignsCalls += 1;
-      // First call returns the fixture; subsequent calls return empty.
-      if (state.campaignsCalls === 1) {
-        return new Response(JSON.stringify(campaigns), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        });
-      }
-      return new Response(JSON.stringify({ Campaigns: [] }), {
+    if (/PromoCodes\?Page=1/.test(u)) {
+      return new Response(JSON.stringify(page1), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       });
     }
-
-    const m = u.match(/\/Campaigns\/(\d+)\/PromoCodes/);
-    if (m) {
-      const id = m[1] ?? '';
-      state.promoCalls[id] = (state.promoCalls[id] ?? 0) + 1;
-      if (id === '9001') {
-        return new Response(JSON.stringify(pc9001), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        });
-      }
-      if (id === '9002') {
-        return new Response(JSON.stringify(pc9002), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        });
-      }
-      return new Response(JSON.stringify({ PromoCodes: [] }), {
+    if (/PromoCodes\?Page=2/.test(u)) {
+      return new Response(JSON.stringify(page2), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       });
     }
-
     return new Response('not found', { status: 404 });
   });
 
@@ -92,12 +66,12 @@ describe('ImpactAdapter', () => {
     expect(new ImpactAdapter({ accountSid: 'sid', authToken: 'tok' }).isConfigured()).toBe(true);
   });
 
-  it('yields normalized RawDealInputs from campaigns + promocodes fixtures', async () => {
+  it('hits the flat /PromoCodes endpoint, follows @nextpageuri, and yields all records', async () => {
     const { impl, state } = await makeFakeFetch();
     const adapter = new ImpactAdapter({
       accountSid: 'IRAX-test',
       authToken: 'secret',
-      pageSize: 100,
+      pageSize: 200,
       fetchImpl: impl,
     });
 
@@ -107,9 +81,22 @@ describe('ImpactAdapter', () => {
     expect(out).toHaveLength(3);
     for (const item of out) expect(item.sourceNetwork).toBe('impact');
 
-    expect(state.campaignsCalls).toBeGreaterThanOrEqual(1);
-    expect(state.promoCalls['9001']).toBe(1);
-    expect(state.promoCalls['9002']).toBe(1);
+    // Two HTTP calls: initial page + @nextpageuri.
+    expect(state.calls).toHaveLength(2);
+    expect(state.calls[0]!.url).toBe(
+      'https://api.impact.com/Mediapartners/IRAX-test/PromoCodes?Page=1&PageSize=200'
+    );
+    expect(state.calls[1]!.url).toBe(
+      'https://api.impact.com/Mediapartners/IRAX-test/PromoCodes?Page=2&PageSize=200'
+    );
+    // Flat endpoint — no per-campaign nesting.
+    for (const c of state.calls) {
+      expect(c.url).not.toMatch(/\/Campaigns\/\d+\/PromoCodes/);
+    }
+    // Auth header is HTTP Basic.
+    const headers0 = (state.calls[0]!.init?.headers ?? {}) as Record<string, string>;
+    expect(headers0['Authorization']).toMatch(/^Basic /);
+    expect(headers0['Accept']).toBe('application/json');
 
     const tea25 = out.find((d) => d.code === 'TEA25');
     expect(tea25).toBeDefined();
@@ -118,6 +105,7 @@ describe('ImpactAdapter', () => {
     expect(tea25?.discountValueBps).toBe(2500);
     expect(tea25?.merchant.slug).toBe('greenleaf-tea-co');
     expect(tea25?.deeplink).toBe('https://impact.example/track?p=tea25');
+    expect(tea25?.geoScope).toEqual(['US', 'CA']);
 
     const freeship = out.find((d) => d.code === 'FREESHIP');
     expect(freeship?.discountType).toBe('free_shipping');
@@ -126,18 +114,79 @@ describe('ImpactAdapter', () => {
     expect(petpix?.discountType).toBe('amt_off');
     expect(petpix?.discountValueCents).toBe(1000);
     expect(petpix?.merchant.slug).toBe('pixelpet-photography');
+    expect(petpix?.geoScope).toEqual(['US']);
+  });
+
+  it('retries once after a 429 with Retry-After', async () => {
+    let calls = 0;
+    const successBody = {
+      PromoCodes: [
+        {
+          Id: 'pc-1',
+          Code: 'OK10',
+          Description: 'Save 10%',
+          AdvertiserName: 'OK Co',
+          CampaignId: 1,
+        },
+      ],
+    };
+    const fakeFetch = vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) {
+        return new Response('rate limited', {
+          status: 429,
+          headers: { 'Retry-After': '0' },
+        });
+      }
+      return new Response(JSON.stringify(successBody), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+
+    const adapter = new ImpactAdapter({
+      accountSid: 'sid',
+      authToken: 'tok',
+      pageSize: 200,
+      fetchImpl: fakeFetch,
+    });
+    const out: RawDealInput[] = [];
+    for await (const item of adapter.fetch()) out.push(item);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.code).toBe('OK10');
+    expect(calls).toBe(2);
+  });
+
+  it('aborts the page after a second 429 rather than spinning', async () => {
+    let calls = 0;
+    const fakeFetch = vi.fn(async () => {
+      calls += 1;
+      return new Response('rate limited', {
+        status: 429,
+        headers: { 'Retry-After': '0' },
+      });
+    }) as unknown as typeof fetch;
+
+    const adapter = new ImpactAdapter({
+      accountSid: 'sid',
+      authToken: 'tok',
+      pageSize: 200,
+      fetchImpl: fakeFetch,
+    });
+    const out: RawDealInput[] = [];
+    for await (const item of adapter.fetch()) out.push(item);
+    expect(out).toHaveLength(0);
+    // exactly one initial attempt + one retry, then bail.
+    expect(calls).toBe(2);
   });
 
   it('mapImpactPromoCode falls back to campaign+code source id when Id absent', () => {
-    const mapped = mapImpactPromoCode(
-      {
-        Code: 'X1',
-        Description: '5% off',
-        AdvertiserName: 'A Co',
-        CampaignId: 1,
-      } as ImpactPromoCode,
-      { CampaignId: 1, AdvertiserName: 'A Co' }
-    );
+    const mapped = mapImpactPromoCode({
+      Code: 'X1',
+      Description: '5% off',
+      AdvertiserName: 'A Co',
+      CampaignId: 1,
+    } as ImpactPromoCode);
     expect(mapped).not.toBeNull();
     expect(mapped?.sourceId).toBe('1:X1');
   });

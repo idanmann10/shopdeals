@@ -13,22 +13,32 @@ const fixturePath = resolve(here, '..', 'fixtures', 'awin-page-1.json');
 
 interface AwinFixture {
   data: AwinPromotion[];
-  pagination: { total: number; currentPage: number; pageSize: number };
+  pagination: { pageSize: number; total: number; cursor?: string };
 }
 
 async function loadFixture(): Promise<AwinFixture> {
   return JSON.parse(await readFile(fixturePath, 'utf8')) as AwinFixture;
 }
 
-function makeFakeFetch(pages: Array<unknown>): typeof fetch {
-  const fakeFetch = vi.fn(async (_url: unknown, _init?: unknown) => {
-    const body = pages.shift() ?? { data: [], pagination: { total: 0, currentPage: 1, pageSize: 100 } };
+interface CapturedCall {
+  url: string;
+  init: RequestInit | undefined;
+}
+
+function makeFakeFetch(pages: Array<unknown>): {
+  impl: typeof fetch;
+  calls: CapturedCall[];
+} {
+  const calls: CapturedCall[] = [];
+  const fakeFetch = vi.fn(async (url: unknown, init?: unknown) => {
+    calls.push({ url: String(url), init: init as RequestInit | undefined });
+    const body = pages.shift() ?? { data: [], pagination: { pageSize: 200, total: 0 } };
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });
   });
-  return fakeFetch as unknown as typeof fetch;
+  return { impl: fakeFetch as unknown as typeof fetch, calls };
 }
 
 describe('AwinAdapter', () => {
@@ -39,14 +49,57 @@ describe('AwinAdapter', () => {
     expect(new AwinAdapter({ apiToken: 'x', publisherId: '1' }).isConfigured()).toBe(true);
   });
 
-  it('yields normalized RawDealInputs from a fixture', async () => {
+  it('issues a POST to the singular /publisher/{id}/promotions endpoint with the correct body and headers', async () => {
     const fixture = await loadFixture();
-    const empty = { data: [], pagination: { total: 0, currentPage: 2, pageSize: 100 } };
+    const { impl, calls } = makeFakeFetch([fixture]);
     const adapter = new AwinAdapter({
       apiToken: 'test-token',
       publisherId: '1234',
-      pageSize: 100,
-      fetchImpl: makeFakeFetch([fixture, empty]),
+      pageSize: 200,
+      regionCodes: ['US', 'GB'],
+      fetchImpl: impl,
+      delayBetweenPagesMs: 0,
+    });
+
+    const out: RawDealInput[] = [];
+    for await (const item of adapter.fetch()) out.push(item);
+
+    expect(calls).toHaveLength(1);
+    const call = calls[0]!;
+    expect(call.url).toContain('https://api.awin.com/publisher/1234/promotions');
+    expect(call.url).not.toContain('/publishers/');
+    expect(call.url).toContain('accessToken=test-token');
+
+    expect(call.init?.method).toBe('POST');
+
+    const headers = (call.init?.headers ?? {}) as Record<string, string>;
+    // Raw token, no `Bearer ` prefix.
+    expect(headers['Authorization']).toBe('test-token');
+    expect(headers['Authorization']).not.toMatch(/^Bearer /);
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers['Accept']).toBe('application/json');
+
+    const body = JSON.parse(String(call.init?.body)) as {
+      filters: { membership: string; type: string; regionCodes: string[] };
+      pagination: { pageSize: number; cursor?: string };
+    };
+    expect(body.filters.membership).toBe('joined');
+    expect(body.filters.type).toBe('voucher');
+    expect(body.filters.regionCodes).toEqual(['US', 'GB']);
+    expect(body.pagination.pageSize).toBe(200);
+    expect(body.pagination.cursor).toBeUndefined();
+
+    expect(out).toHaveLength(2);
+  });
+
+  it('yields normalized RawDealInputs from a fixture', async () => {
+    const fixture = await loadFixture();
+    const { impl } = makeFakeFetch([fixture]);
+    const adapter = new AwinAdapter({
+      apiToken: 'test-token',
+      publisherId: '1234',
+      pageSize: 200,
+      fetchImpl: impl,
       delayBetweenPagesMs: 0,
     });
 
@@ -72,6 +125,17 @@ describe('AwinAdapter', () => {
     expect(solar?.discountType).toBe('amt_off');
     expect(solar?.discountValueCents).toBe(5000);
     expect(solar?.geoScope).toEqual(['US']);
+  });
+
+  it('represents `regions.all=true` as ["*"]', () => {
+    const mapped = mapAwinPromotion({
+      promotionId: 99,
+      advertiser: { id: 1, name: 'Global Co' },
+      title: '10% off everything',
+      voucher: { code: 'GLOBAL10' },
+      regions: { all: true, list: [] },
+    } as AwinPromotion);
+    expect(mapped?.geoScope).toEqual(['*']);
   });
 
   it('mapAwinPromotion returns null when advertiser name missing', () => {

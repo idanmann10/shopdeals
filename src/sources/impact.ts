@@ -1,47 +1,39 @@
 /**
  * Impact.com PromoCodes source adapter.
  *
- * We first list the publisher's joined Campaigns, then fetch each campaign's
- * PromoCodes:
- *   GET https://api.impact.com/Mediapartners/{SID}/Campaigns
- *     ?PageSize=100&Page=N
- *   GET https://api.impact.com/Mediapartners/{SID}/Campaigns/{id}/PromoCodes
+ * Endpoint (flat — no per-campaign nesting):
+ *   GET https://api.impact.com/Mediapartners/{SID}/PromoCodes?Page=N&PageSize=200
  *
- * Auth: HTTP Basic with `IMPACT_ACCOUNT_SID:IMPACT_AUTH_TOKEN`. The API
- * returns JSON when `Accept: application/json` is set.
+ * For v1 we enumerate every joined campaign at once. Filtering by
+ * `?CampaignId=N` is supported by the API but we don't need it here.
  *
- * Records have:
- *   Code, Description, StartDate, EndDate, LandingPageUrl, CampaignName,
- *   AdvertiserName, CampaignId, Id
+ * Pagination: the response includes `@numpages` and (when there's another
+ * page) `@nextpageuri`. We follow `@nextpageuri` until it's missing/empty
+ * rather than incrementing the page number ourselves — Impact's docs say
+ * the value already encodes the right page-size and any filters from the
+ * initial request.
+ *
+ * Auth: HTTP Basic (`Authorization: Basic ${base64(SID:TOKEN)}`),
+ * `Accept: application/json` to coerce JSON instead of the legacy XML.
+ *
+ * Rate limiting: on a 429, read `Retry-After` (seconds), sleep, retry once.
+ * If the retry also returns 429 we abort the page rather than infinite-loop.
+ *
+ * Promo code record (per Impact JSON):
+ *   Id, Code, Description, StartDate, EndDate, LandingPageUrl, CampaignName,
+ *   AdvertiserName, CampaignId, CountryCodes (string[]).
  */
 import { z } from 'zod';
 import { env } from '../lib/env.ts';
 import { log } from '../lib/log.ts';
 import {
   parseDiscountFromText,
+  sleep,
   slugify,
   toDate,
   type RawDealInput,
   type SourceAdapter,
 } from './common.ts';
-
-const ImpactCampaignSchema = z
-  .object({
-    CampaignId: z.union([z.string(), z.number()]),
-    CampaignName: z.string().nullish(),
-    AdvertiserName: z.string().nullish(),
-    AdvertiserId: z.union([z.string(), z.number()]).nullish(),
-  })
-  .passthrough();
-
-const ImpactCampaignsResponseSchema = z
-  .object({
-    Campaigns: z.array(ImpactCampaignSchema).nullish(),
-    '@page': z.union([z.string(), z.number()]).nullish(),
-    '@total': z.union([z.string(), z.number()]).nullish(),
-    '@numpages': z.union([z.string(), z.number()]).nullish(),
-  })
-  .passthrough();
 
 const ImpactPromoCodeSchema = z
   .object({
@@ -55,16 +47,20 @@ const ImpactPromoCodeSchema = z
     AdvertiserName: z.string().nullish(),
     CampaignId: z.union([z.string(), z.number()]).nullish(),
     PromoType: z.string().nullish(),
+    CountryCodes: z.array(z.string()).nullish(),
   })
   .passthrough();
 
 const ImpactPromoCodesResponseSchema = z
   .object({
     PromoCodes: z.array(ImpactPromoCodeSchema).nullish(),
+    '@numpages': z.union([z.string(), z.number()]).nullish(),
+    '@nextpageuri': z.string().nullish(),
+    '@page': z.union([z.string(), z.number()]).nullish(),
+    '@total': z.union([z.string(), z.number()]).nullish(),
   })
   .passthrough();
 
-export type ImpactCampaign = z.infer<typeof ImpactCampaignSchema>;
 export type ImpactPromoCode = z.infer<typeof ImpactPromoCodeSchema>;
 
 export interface ImpactAdapterOptions {
@@ -76,6 +72,11 @@ export interface ImpactAdapterOptions {
 }
 
 const IMPACT_BASE = 'https://api.impact.com';
+
+interface ImpactPage {
+  promoCodes: ImpactPromoCode[];
+  nextPageUri: string | undefined;
+}
 
 export class ImpactAdapter implements SourceAdapter {
   readonly network = 'impact' as const;
@@ -96,7 +97,7 @@ export class ImpactAdapter implements SourceAdapter {
     })();
     this.accountSid = opts.accountSid ?? e?.IMPACT_ACCOUNT_SID ?? '';
     this.authToken = opts.authToken ?? e?.IMPACT_AUTH_TOKEN ?? '';
-    this.pageSize = Math.max(1, Math.min(1000, opts.pageSize ?? 100));
+    this.pageSize = Math.max(1, Math.min(1000, opts.pageSize ?? 200));
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.maxPages = Math.max(1, opts.maxPages ?? 200);
   }
@@ -111,30 +112,32 @@ export class ImpactAdapter implements SourceAdapter {
       return;
     }
 
+    const firstUrl =
+      `${IMPACT_BASE}/Mediapartners/${encodeURIComponent(this.accountSid)}/PromoCodes` +
+      `?Page=1&PageSize=${this.pageSize}`;
+    let nextUrl: string | undefined = firstUrl;
+
     for (let page = 1; page <= this.maxPages; page += 1) {
-      const campaigns = await this.fetchCampaigns(page);
-      if (campaigns === null) continue;
-      if (campaigns.length === 0) {
-        log.debug({ network: this.network, page }, 'Impact: empty campaigns page, stopping');
-        return;
+      if (!nextUrl) return;
+      const result = await this.fetchPromoCodesPage(nextUrl);
+      if (result === null) return;
+
+      for (const pc of result.promoCodes) {
+        const mapped = mapImpactPromoCode(pc);
+        if (mapped) yield mapped;
       }
 
-      for (const campaign of campaigns) {
-        const promoCodes = await this.fetchPromoCodes(campaign);
-        if (promoCodes === null) continue;
-        for (const pc of promoCodes) {
-          const mapped = mapImpactPromoCode(pc, campaign);
-          if (mapped) yield mapped;
-        }
-      }
-
-      if (campaigns.length < this.pageSize) {
+      if (!result.nextPageUri) {
         log.debug(
-          { network: this.network, page, count: campaigns.length },
-          'Impact: short campaigns page, stopping'
+          { network: this.network, page, count: result.promoCodes.length },
+          'Impact: no @nextpageuri, stopping'
         );
         return;
       }
+      // `@nextpageuri` is typically a path like
+      // `/Mediapartners/IRAX.../PromoCodes?Page=2&PageSize=200`. Resolve it
+      // against the API base so the next iteration can GET it directly.
+      nextUrl = resolveImpactNextUri(result.nextPageUri, IMPACT_BASE);
     }
   }
 
@@ -143,88 +146,112 @@ export class ImpactAdapter implements SourceAdapter {
     return `Basic ${token}`;
   }
 
-  private async fetchCampaigns(page: number): Promise<ImpactCampaign[] | null> {
-    const url =
-      `${IMPACT_BASE}/Mediapartners/${encodeURIComponent(this.accountSid)}/Campaigns` +
-      `?PageSize=${this.pageSize}&Page=${page}`;
-    const json = await this.fetchJson(url, `campaigns page ${page}`);
-    if (!json) return null;
-    const parsed = ImpactCampaignsResponseSchema.safeParse(json);
-    if (!parsed.success) {
-      log.error(
-        { network: this.network, page, issues: parsed.error.issues.slice(0, 3) },
-        'Impact: invalid campaigns response shape'
-      );
-      return null;
-    }
-    return parsed.data.Campaigns ?? [];
-  }
-
-  private async fetchPromoCodes(
-    campaign: ImpactCampaign
-  ): Promise<ImpactPromoCode[] | null> {
-    const id = encodeURIComponent(String(campaign.CampaignId));
-    const url =
-      `${IMPACT_BASE}/Mediapartners/${encodeURIComponent(this.accountSid)}/Campaigns/${id}/PromoCodes`;
-    const json = await this.fetchJson(url, `promocodes for campaign ${id}`);
+  private async fetchPromoCodesPage(url: string): Promise<ImpactPage | null> {
+    const json = await this.fetchJsonWithRetry(url);
     if (!json) return null;
     const parsed = ImpactPromoCodesResponseSchema.safeParse(json);
     if (!parsed.success) {
       log.error(
-        {
-          network: this.network,
-          campaignId: id,
-          issues: parsed.error.issues.slice(0, 3),
-        },
+        { network: this.network, url, issues: parsed.error.issues.slice(0, 3) },
         'Impact: invalid promocodes response shape'
       );
       return null;
     }
-    return parsed.data.PromoCodes ?? [];
+    return {
+      promoCodes: parsed.data.PromoCodes ?? [],
+      nextPageUri:
+        typeof parsed.data['@nextpageuri'] === 'string' &&
+        parsed.data['@nextpageuri'].length > 0
+          ? parsed.data['@nextpageuri']
+          : undefined,
+    };
   }
 
-  private async fetchJson(url: string, label: string): Promise<unknown | null> {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 30_000);
-    try {
-      const res = await this.fetchImpl(url, {
-        headers: {
-          Authorization: this.authHeader(),
-          Accept: 'application/json',
-        },
-        signal: controller.signal,
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => '');
+  /**
+   * GET a single Impact URL, retrying once on HTTP 429 with the server's
+   * advertised `Retry-After`. Returns the parsed JSON body or `null` on
+   * any unrecoverable error.
+   */
+  private async fetchJsonWithRetry(url: string): Promise<unknown | null> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 30_000);
+      try {
+        const res = await this.fetchImpl(url, {
+          headers: {
+            Authorization: this.authHeader(),
+            Accept: 'application/json',
+          },
+          signal: controller.signal,
+        });
+        if (res.status === 429) {
+          if (attempt === 0) {
+            const retryAfter = parseRetryAfterSeconds(res.headers.get('Retry-After'));
+            log.warn(
+              { network: this.network, url, retryAfterSec: retryAfter },
+              'Impact: 429 rate-limited, sleeping before single retry'
+            );
+            await sleep(Math.max(0, retryAfter * 1000));
+            continue;
+          }
+          // Second 429 — abort this page rather than spin.
+          log.error(
+            { network: this.network, url },
+            'Impact: 429 again after retry, aborting page'
+          );
+          return null;
+        }
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          log.error(
+            { network: this.network, url, status: res.status, body: body.slice(0, 200) },
+            'Impact: non-2xx response'
+          );
+          return null;
+        }
+        return (await res.json()) as unknown;
+      } catch (err) {
         log.error(
-          { network: this.network, label, status: res.status, body: body.slice(0, 200) },
-          'Impact: non-2xx response'
+          {
+            network: this.network,
+            url,
+            err: err instanceof Error ? err.message : String(err),
+          },
+          'Impact: fetch failed'
         );
         return null;
+      } finally {
+        clearTimeout(t);
       }
-      return (await res.json()) as unknown;
-    } catch (err) {
-      log.error(
-        {
-          network: this.network,
-          label,
-          err: err instanceof Error ? err.message : String(err),
-        },
-        'Impact: fetch failed'
-      );
-      return null;
-    } finally {
-      clearTimeout(t);
     }
+    return null;
   }
 }
 
-export function mapImpactPromoCode(
-  pc: ImpactPromoCode,
-  campaign?: ImpactCampaign
-): RawDealInput | null {
+function parseRetryAfterSeconds(value: string | null): number {
+  if (!value) return 1;
+  const n = Number(value);
+  if (Number.isFinite(n) && n >= 0) return Math.min(60, n);
+  // RFC 7231 also allows an HTTP-date; fall back to a small default.
+  const t = Date.parse(value);
+  if (!Number.isNaN(t)) {
+    const delta = Math.round((t - Date.now()) / 1000);
+    return Math.max(0, Math.min(60, delta));
+  }
+  return 1;
+}
+
+function resolveImpactNextUri(uri: string, base: string): string {
+  try {
+    return new URL(uri, base).toString();
+  } catch {
+    return uri;
+  }
+}
+
+export function mapImpactPromoCode(pc: ImpactPromoCode): RawDealInput | null {
   const code = (pc.Code ?? '').trim();
-  const campaignId = String(pc.CampaignId ?? campaign?.CampaignId ?? '').trim();
+  const campaignId = String(pc.CampaignId ?? '').trim();
 
   // Build a stable source id. Impact's promo code records sometimes lack a
   // numeric id, so we fall back to campaign+code which is unique per campaign.
@@ -232,13 +259,7 @@ export function mapImpactPromoCode(
   const sourceId = rawId.length > 0 ? rawId : `${campaignId}:${code}`;
   if (sourceId === ':' || sourceId.length === 0) return null;
 
-  const advertiserName = (
-    pc.AdvertiserName ??
-    campaign?.AdvertiserName ??
-    pc.CampaignName ??
-    campaign?.CampaignName ??
-    ''
-  ).trim();
+  const advertiserName = (pc.AdvertiserName ?? pc.CampaignName ?? '').trim();
   if (!advertiserName) return null;
 
   const description = (pc.Description ?? '').trim();
@@ -251,6 +272,10 @@ export function mapImpactPromoCode(
   const parsed = parseDiscountFromText(description);
   const startsAt = toDate(pc.StartDate);
   const expiresAt = toDate(pc.EndDate);
+
+  const geoScope = (pc.CountryCodes ?? [])
+    .map((s) => (s ?? '').trim().toUpperCase())
+    .filter((s) => /^[A-Z]{2}$/.test(s));
 
   const out: RawDealInput = {
     sourceNetwork: 'impact',
@@ -265,15 +290,13 @@ export function mapImpactPromoCode(
     sourceMeta: {
       raw: pc,
       ...(campaignId ? { campaignId } : {}),
-      ...(campaign?.AdvertiserId !== undefined && campaign?.AdvertiserId !== null
-        ? { advertiserId: String(campaign.AdvertiserId) }
-        : {}),
     },
   };
   if (code.length > 0) out.code = code;
   if (description.length > 0) out.description = description;
   if (parsed.discountValueBps !== undefined) out.discountValueBps = parsed.discountValueBps;
   if (parsed.discountValueCents !== undefined) out.discountValueCents = parsed.discountValueCents;
+  if (geoScope.length > 0) out.geoScope = geoScope;
   if (startsAt) out.startsAt = startsAt;
   if (expiresAt) out.expiresAt = expiresAt;
   if (pc.LandingPageUrl) out.deeplink = pc.LandingPageUrl;

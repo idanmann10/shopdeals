@@ -1,4 +1,8 @@
 {
+  "@page": 1,
+  "@numpages": 2,
+  "@total": 3,
+  "@nextpageuri": "/Mediapartners/IRAX-test/PromoCodes?Page=2&PageSize=200",
   "PromoCodes": [
     {
       "Id": "pc-9001-a",
@@ -10,7 +14,8 @@
       "CampaignName": "GreenLeaf Tea — General",
       "AdvertiserName": "GreenLeaf Tea Co",
       "CampaignId": 9001,
-      "PromoType": "PROMOCODE"
+      "PromoType": "PROMOCODE",
+      "CountryCodes": ["US", "CA"]
     },
     {
       "Id": "pc-9001-b",
@@ -22,7 +27,8 @@
       "CampaignName": "GreenLeaf Tea — General",
       "AdvertiserName": "GreenLeaf Tea Co",
       "CampaignId": 9001,
-      "PromoType": "PROMOCODE"
+      "PromoType": "PROMOCODE",
+      "CountryCodes": ["US"]
     }
   ]
 }

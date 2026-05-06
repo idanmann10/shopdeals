@@ -14,11 +14,14 @@
       "type": "voucher",
       "startDate": "2026-04-15T00:00:00Z",
       "endDate": "2026-08-30T23:59:59Z",
-      "urlClickThrough": "https://awin1.example/cread.php?p=50001",
-      "regions": [
-        { "countryCode": "GB" },
-        { "countryCode": "IE" }
-      ]
+      "urlTracking": "https://awin1.example/cread.php?p=50001",
+      "regions": {
+        "all": false,
+        "list": [
+          { "countryCode": "GB" },
+          { "countryCode": "IE" }
+        ]
+      }
     },
     {
       "promotionId": 50002,
@@ -34,13 +37,15 @@
       "type": "voucher",
       "startDate": "2026-03-01T00:00:00Z",
       "endDate": "2026-12-31T00:00:00Z",
-      "urlClickThrough": "https://awin1.example/cread.php?p=50002",
-      "regions": [{ "countryCode": "US" }]
+      "urlTracking": "https://awin1.example/cread.php?p=50002",
+      "regions": {
+        "all": false,
+        "list": [{ "countryCode": "US" }]
+      }
     }
   ],
   "pagination": {
-    "total": 2,
-    "currentPage": 1,
-    "pageSize": 100
+    "pageSize": 200,
+    "total": 2
   }
 }

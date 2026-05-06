@@ -1,4 +1,7 @@
 {
+  "@page": 2,
+  "@numpages": 2,
+  "@total": 3,
   "PromoCodes": [
     {
       "Id": "pc-9002-a",
@@ -10,7 +13,8 @@
       "CampaignName": "PixelPet Photography — General",
       "AdvertiserName": "PixelPet Photography",
       "CampaignId": 9002,
-      "PromoType": "PROMOCODE"
+      "PromoType": "PROMOCODE",
+      "CountryCodes": ["US"]
     }
   ]
 }

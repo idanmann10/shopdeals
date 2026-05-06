@@ -1,7 +1,7 @@
 /**
- * Unit tests for the FMTC adapter. We mock `fetch` to return the static
+ * Unit tests for the FMTC v3 adapter. We mock `fetch` to return the static
  * fixture in `test/fixtures/fmtc-page-1.json`, then drive the adapter and
- * assert the normalized records.
+ * assert the normalized records and the request shape.
  */
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -13,19 +13,39 @@ import type { RawDealInput } from '../../src/sources/common.ts';
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturePath = resolve(here, '..', 'fixtures', 'fmtc-page-1.json');
 
-async function loadFixture(): Promise<{ coupons: FmtcCoupon[] }> {
-  return JSON.parse(await readFile(fixturePath, 'utf8')) as { coupons: FmtcCoupon[] };
+interface FmtcFixture {
+  data: FmtcCoupon[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
 }
 
-function makeFakeFetch(pages: Array<unknown>): typeof fetch {
-  const fakeFetch = vi.fn(async (_url: unknown) => {
-    const body = pages.shift() ?? { coupons: [] };
+async function loadFixture(): Promise<FmtcFixture> {
+  return JSON.parse(await readFile(fixturePath, 'utf8')) as FmtcFixture;
+}
+
+interface CapturedCall {
+  url: string;
+  init: RequestInit | undefined;
+}
+
+function makeFakeFetch(pages: Array<unknown>): {
+  impl: typeof fetch;
+  calls: CapturedCall[];
+} {
+  const calls: CapturedCall[] = [];
+  const fakeFetch = vi.fn(async (url: unknown, init?: unknown) => {
+    calls.push({ url: String(url), init: init as RequestInit | undefined });
+    const body = pages.shift() ?? { data: [], meta: { current_page: 99, last_page: 99 } };
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });
   });
-  return fakeFetch as unknown as typeof fetch;
+  return { impl: fakeFetch as unknown as typeof fetch, calls };
 }
 
 describe('FmtcAdapter', () => {
@@ -35,16 +55,46 @@ describe('FmtcAdapter', () => {
   });
 
   it('is configured with an API key', () => {
-    const a = new FmtcAdapter({ apiKey: 'k', fetchImpl: makeFakeFetch([]) });
+    const { impl } = makeFakeFetch([]);
+    const a = new FmtcAdapter({ apiKey: 'k', fetchImpl: impl });
     expect(a.isConfigured()).toBe(true);
+  });
+
+  it('uses the v3 base URL with snake_case query params and bearer header', async () => {
+    const fixture = await loadFixture();
+    const { impl, calls } = makeFakeFetch([fixture]);
+    const adapter = new FmtcAdapter({
+      apiKey: 'test-key',
+      pageSize: 200,
+      fetchImpl: impl,
+    });
+
+    const out: RawDealInput[] = [];
+    for await (const item of adapter.fetch()) out.push(item);
+
+    expect(calls).toHaveLength(1);
+    const call = calls[0]!;
+    expect(call.url).toContain('https://s3.fmtc.co/api/v3/coupons');
+    expect(call.url).toContain('api_key=test-key');
+    expect(call.url).toContain('page=1');
+    expect(call.url).toContain('page_size=200');
+    expect(call.url).not.toContain('per_page=');
+
+    const headers = (call.init?.headers ?? {}) as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer test-key');
+    expect(headers['Accept']).toBe('application/json');
+
+    // last_page=1 in the fixture means we should stop after one request.
+    expect(out).toHaveLength(3);
   });
 
   it('yields normalized RawDealInputs from a fixture', async () => {
     const fixture = await loadFixture();
+    const { impl } = makeFakeFetch([fixture]);
     const adapter = new FmtcAdapter({
       apiKey: 'test-key',
-      perPage: 200,
-      fetchImpl: makeFakeFetch([fixture, { coupons: [] }]),
+      pageSize: 200,
+      fetchImpl: impl,
     });
 
     const out: RawDealInput[] = [];
@@ -62,6 +112,10 @@ describe('FmtcAdapter', () => {
     expect(acme?.merchant.slug).toBe('acme-outdoor-supply');
     expect(acme?.geoScope).toEqual(['US', 'CA']);
     expect(acme?.deeplink).toBe('https://track.example/click?id=1001');
+    // Verification timestamps surface through sourceMeta.
+    expect(acme?.sourceMeta?.['codeVerifiedAt']).toBe('2026-05-04T12:00:00Z');
+    expect(acme?.sourceMeta?.['linkVerifiedAt']).toBe('2026-05-04T12:00:00Z');
+    expect(acme?.sourceMeta?.['couponCodeOnPage']).toBe(true);
 
     const bookworm = out.find((d) => d.sourceId === 'fmtc-1002');
     expect(bookworm).toBeDefined();
@@ -85,11 +139,11 @@ describe('FmtcAdapter', () => {
     expect(out).toEqual([]);
   });
 
-  it('mapFmtcCoupon returns null when advertiserName is missing', () => {
+  it('mapFmtcCoupon returns null when advertiser_name is missing', () => {
     expect(
       mapFmtcCoupon({
         id: 'x',
-        advertiserName: '',
+        advertiser_name: '',
       } as FmtcCoupon)
     ).toBeNull();
   });
