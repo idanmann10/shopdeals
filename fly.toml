@@ -86,9 +86,7 @@ primary_region = "iad"
     protocol      = "http"
 
 [[vm]]
-  size                 = "shared-cpu-1x"
-  memory               = "512mb"
-  cpus                 = 1
-  cpu_kind             = "shared"
-  auto_stop_machines   = "stop"
-  min_machines_running = 1
+  size     = "shared-cpu-1x"
+  memory   = "512mb"
+  cpus     = 1
+  cpu_kind = "shared"

@@ -23,6 +23,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seed.ts",
     "ingest": "tsx src/cron/ingest.ts",
     "mcp:smoke": "tsx test/smoke.ts"
   },
