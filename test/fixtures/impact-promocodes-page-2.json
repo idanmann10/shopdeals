@@ -1,0 +1,20 @@
+{
+  "@page": 2,
+  "@numpages": 2,
+  "@total": 3,
+  "PromoCodes": [
+    {
+      "Id": "pc-9002-a",
+      "Code": "PETPIX10",
+      "Description": "Save $10 on any pet photo session",
+      "StartDate": "2026-05-01T00:00:00Z",
+      "EndDate": "2026-07-31T00:00:00Z",
+      "LandingPageUrl": "https://impact.example/track?p=petpix10",
+      "CampaignName": "PixelPet Photography — General",
+      "AdvertiserName": "PixelPet Photography",
+      "CampaignId": 9002,
+      "PromoType": "PROMOCODE",
+      "CountryCodes": ["US"]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: typecheck / lint / test / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://placeholder:placeholder@localhost:5432/placeholder
+      CLERK_SECRET_KEY: sk_test_x
+      CLERK_PUBLISHABLE_KEY: pk_test_x
+      STRIPE_SECRET_KEY: sk_test_x
+      STRIPE_WEBHOOK_SECRET: whsec_test_x
+      STRIPE_PRICE_FREE: price_test_x
+      STRIPE_PRICE_STARTER: price_test_x
+      STRIPE_PRICE_PRO: price_test_x
+      FMTC_API_KEY: ''
+      AWIN_API_TOKEN: ''
+      AWIN_PUBLISHER_ID: ''
+      IMPACT_ACCOUNT_SID: ''
+      IMPACT_AUTH_TOKEN: ''
+      KEEPA_API_KEY: ''
+      VOYAGE_API_KEY: ''
+      MCP_PUBLIC_URL: http://localhost:3000
+      MCP_OAUTH_ISSUER: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
