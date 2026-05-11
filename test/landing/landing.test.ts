@@ -65,11 +65,11 @@ describe('landing page', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     const body = await res.text();
-    expect(body).toContain('snap-ai');
-    // Three integration cards must all render.
-    expect(body).toContain('Claude Desktop');
-    expect(body).toContain('ChatGPT');
-    expect(body).toContain('Cursor');
+    expect(body).toContain('shopdeals');
+    // Three install cards must all render — these are the primary CTAs.
+    expect(body).toContain('Add to Claude');
+    expect(body).toContain('Add to ChatGPT');
+    expect(body).toContain('Add to Cursor');
     // Waitlist form must be rendered with the expected ids the JS hooks into.
     expect(body).toContain('id="waitlist-form"');
     expect(body).toContain('id="waitlist-email"');

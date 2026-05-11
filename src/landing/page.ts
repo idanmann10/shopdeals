@@ -2,10 +2,12 @@
  * Server-rendered landing page. Single HTML string returned from `GET /`.
  * No SPA, no build step, no external image assets beyond Google Fonts.
  *
- * The hero leads with a chat-style mockup of "ask AI → get a deal card",
- * deliberately B2C in voice. Live counts (deals/merchants/freshness) come
- * from `loadLandingStats` so the page always looks alive even with a
- * single-digit catalog.
+ * Design reference: DealPilot AI shopping-agent mockup. Component-driven
+ * layout with a live product-card hero, two illustrated narrative sections,
+ * and dedicated Add-to-Claude / Add-to-ChatGPT install cards. Brand: shopdeals.
+ *
+ * Live counts (deals / merchants / freshness) come from `loadLandingStats`
+ * so the page always looks alive even with a small catalog.
  */
 
 export interface LandingData {
@@ -23,398 +25,430 @@ export function landingHtml(data: LandingData = {}): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Snap-AI — Find good deals online with your AI</title>
-<meta name="description" content="Tell Claude, ChatGPT, or Cursor what you want. Snap-AI hands them working coupon codes and live prices so you save money without thinking about it." />
-<meta property="og:title" content="Snap-AI — Find good deals online with your AI" />
-<meta property="og:description" content="Tell Claude, ChatGPT, or Cursor what you want. Snap-AI hands them working codes and live prices." />
+<title>shopdeals — Your AI shopping agent</title>
+<meta name="description" content="Ask your AI to find the best deal. shopdeals plugs into Claude, ChatGPT, and Cursor — it compares trusted sellers, surfaces working coupon codes, and hands back the best buy in one click." />
+<meta property="og:title" content="shopdeals — Your AI shopping agent" />
+<meta property="og:description" content="Ask your AI. We compare sellers, find working codes, and surface the best deal." />
 <meta property="og:type" content="website" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" />
 <style>
   :root {
-    --bg: #fbfafe;
+    --bg: #ffffff;
+    --bg-soft: #f7f6fb;
     --bg-card: #ffffff;
-    --bg-soft: #f3f1fa;
-    --ink: #110f1f;
-    --ink-2: #4a4860;
-    --ink-3: #8e8aa8;
-    --line: #e7e4f0;
-    --line-soft: #f0edf7;
+    --bg-card-soft: #fafaff;
+    --ink: #0f0d1f;
+    --ink-2: #5b5871;
+    --ink-3: #9794ab;
+    --line: #e9e7f0;
+    --line-soft: #f1eff6;
     --brand: #5a4fcf;
-    --brand-2: #7c70e8;
-    --brand-soft: #ece9fb;
-    --warm: #ff7a59;
-    --green: #2f9e6b;
+    --brand-2: #7d6ff0;
+    --brand-soft: #ede9fc;
+    --brand-soft-2: #f4f1ff;
+    --green: #1f9d6b;
     --green-soft: #e3f5ec;
-    --radius: 14px;
+    --warm: #ff7a59;
+    --warm-soft: #ffe8e1;
+    --radius: 18px;
+    --radius-sm: 10px;
   }
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 16px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  a { color: var(--brand); text-decoration: none; }
-  a:hover { color: var(--ink); }
-  ::selection { background: var(--brand); color: var(--bg); }
+  a { color: var(--ink); text-decoration: none; }
+  ::selection { background: var(--brand); color: white; }
 
-  .container { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
-  .container-narrow { max-width: 760px; margin: 0 auto; padding: 0 28px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
 
-  /* Top bar */
-  header { padding: 22px 0; }
+  /* ---------- Header ---------- */
+  header { padding: 26px 0; }
   header .row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
   .logo {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
     color: var(--ink);
   }
   .logo-mark {
-    width: 26px; height: 26px;
+    width: 30px; height: 30px;
     border-radius: 8px;
     background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
-    display: inline-grid; place-items: center;
-    color: white; font-weight: 800; font-size: 14px;
-    box-shadow: 0 2px 8px rgba(90,79,207,0.25);
+    position: relative; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(90,79,207,0.30), inset 0 1px 0 rgba(255,255,255,0.18);
   }
-  .nav { display: flex; gap: 22px; font-size: 14px; align-items: center; }
-  .nav a { color: var(--ink-2); }
+  .logo-mark::after {
+    content: '';
+    position: absolute; inset: 6px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.45), transparent 55%);
+  }
+  .nav { display: flex; gap: 32px; font-size: 14.5px; align-items: center; }
+  .nav a { color: var(--ink-2); font-weight: 500; }
   .nav a:hover { color: var(--ink); }
   .nav-cta {
-    padding: 8px 14px;
-    background: var(--ink); color: var(--bg-card);
-    border-radius: 999px; font-weight: 500;
+    padding: 10px 20px;
+    background: var(--brand); color: white;
+    border-radius: 999px; font-weight: 600;
+    box-shadow: 0 2px 0 rgba(90,79,207,0.15), 0 8px 24px rgba(90,79,207,0.20);
+    transition: transform .12s, box-shadow .12s;
   }
-  .nav-cta:hover { background: var(--brand); color: var(--bg-card); }
+  .nav-cta:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(90,79,207,0.18), 0 12px 28px rgba(90,79,207,0.28); }
 
-  /* Hero */
-  .hero {
-    padding: 56px 0 60px;
-    position: relative;
-    overflow: hidden;
-  }
+  /* ---------- Hero ---------- */
+  .hero { padding: 64px 0 80px; position: relative; overflow: hidden; }
   .hero::before {
     content: '';
     position: absolute;
-    top: -180px; left: 50%; transform: translateX(-50%);
-    width: 1000px; height: 700px;
-    background: radial-gradient(ellipse at center, rgba(90,79,207,0.10) 0%, transparent 60%);
-    pointer-events: none;
-    z-index: 0;
+    bottom: -200px; left: -260px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(125,111,240,0.16) 0%, transparent 65%);
+    pointer-events: none; z-index: 0;
   }
-  .hero-inner { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
-  @media (max-width: 880px) { .hero-inner { grid-template-columns: 1fr; gap: 40px; } }
+  .hero-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
+    align-items: center; position: relative; z-index: 1;
+  }
+  @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; gap: 48px; } }
 
-  .hero-tag {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 12px;
-    background: var(--brand-soft); color: var(--brand);
-    border-radius: 999px; font-size: 12.5px; font-weight: 600;
-    margin-bottom: 22px;
-    letter-spacing: 0.01em;
-  }
   h1.hero-title {
     font-weight: 800;
-    font-size: clamp(40px, 5.5vw, 60px);
-    line-height: 1.04;
+    font-size: clamp(44px, 6vw, 72px);
+    line-height: 1.02;
     letter-spacing: -0.035em;
-    margin: 0 0 20px;
-    color: var(--ink);
+    margin: 0 0 24px;
   }
-  h1.hero-title em { font-style: normal; color: var(--brand); }
   .hero-sub {
-    font-size: clamp(17px, 1.4vw, 19px);
+    font-size: 17.5px;
     color: var(--ink-2);
-    max-width: 520px;
-    margin: 0 0 28px;
+    max-width: 460px;
+    margin: 0 0 36px;
     line-height: 1.55;
   }
-  .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
-  .btn {
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-primary, .btn-ghost {
     display: inline-flex; align-items: center; gap: 8px;
-    font-family: inherit; font-size: 14.5px; font-weight: 600;
-    padding: 12px 20px; border-radius: 999px;
-    border: 1px solid var(--ink); background: var(--ink); color: var(--bg-card);
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    padding: 14px 26px; border-radius: 10px;
     cursor: pointer;
     text-decoration: none;
-    transition: transform .12s ease, background .12s ease, box-shadow .12s;
-    box-shadow: 0 1px 0 rgba(17,15,31,0.05), 0 4px 14px rgba(17,15,31,0.08);
+    transition: transform .12s, box-shadow .12s, background .12s;
   }
-  .btn:hover { background: var(--brand); border-color: var(--brand); color: white; transform: translateY(-1px); }
-  .btn-ghost { background: var(--bg-card); color: var(--ink); border-color: var(--line); box-shadow: none; }
-  .btn-ghost:hover { background: var(--bg-soft); color: var(--ink); border-color: var(--ink); }
+  .btn-primary {
+    background: var(--brand); color: white; border: 1px solid var(--brand);
+    box-shadow: 0 2px 0 rgba(90,79,207,0.18), 0 10px 24px rgba(90,79,207,0.22);
+  }
+  .btn-primary:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(90,79,207,0.18), 0 14px 30px rgba(90,79,207,0.30); }
+  .btn-ghost {
+    background: white; color: var(--brand); border: 1px solid var(--brand-soft);
+  }
+  .btn-ghost:hover { background: var(--brand-soft-2); border-color: var(--brand); }
+  .btn-primary svg, .btn-ghost svg { width: 16px; height: 16px; }
 
-  .trust-row {
-    display: flex; gap: 22px; flex-wrap: wrap; margin-top: 28px;
-    font-size: 13px; color: var(--ink-3);
-  }
-  .trust-row .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; vertical-align: 1px; }
-
-  /* Chat mockup — replaces the old terminal block */
-  .chat {
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: 22px;
-    padding: 22px 22px 26px;
-    box-shadow: 0 4px 12px rgba(17,15,31,0.04), 0 24px 64px rgba(90,79,207,0.10);
-    position: relative;
-  }
-  .chat-head {
-    display: flex; align-items: center; gap: 8px;
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--line-soft);
-    font-size: 12.5px; color: var(--ink-3);
-  }
-  .chat-head .tab-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .tab-dot.r { background: #ff6058; }
-  .tab-dot.y { background: #ffbd2e; }
-  .tab-dot.g { background: #27c93f; }
-  .chat-head .title { margin-left: 10px; font-weight: 500; color: var(--ink-2); }
-
-  .msg { display: flex; gap: 10px; margin-bottom: 14px; }
-  .msg-avatar {
-    width: 30px; height: 30px; border-radius: 50%;
-    display: inline-grid; place-items: center;
-    font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
-  }
-  .msg-avatar.user { background: linear-gradient(135deg, #ffaf6b, #ff7a59); }
-  .msg-avatar.ai { background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
-  .msg-bubble {
-    background: var(--bg-soft);
-    border-radius: 14px;
-    padding: 10px 14px;
-    font-size: 14.5px;
-    color: var(--ink);
-    line-height: 1.5;
-  }
-  .msg.ai .msg-bubble {
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    padding: 14px;
-  }
-  .msg.ai .msg-bubble .lead { margin: 0 0 12px; color: var(--ink-2); font-size: 14px; }
-
-  /* Deal card inside the AI message */
-  .deal-card {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 14px;
-    display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center;
-    background: linear-gradient(180deg, #ffffff, #fbfaff);
-    transition: transform .12s;
-  }
-  .deal-card + .deal-card { margin-top: 8px; }
-  .deal-card:hover { transform: translateY(-1px); border-color: var(--brand); }
-  .merchant-logo {
-    width: 44px; height: 44px; border-radius: 10px;
-    display: inline-grid; place-items: center;
-    font-weight: 800; font-size: 16px; color: white;
-    letter-spacing: -0.02em;
-  }
-  .logo-amazon { background: linear-gradient(135deg,#ff9900,#ffac3a); }
-  .logo-bestbuy { background: linear-gradient(135deg,#0046be,#0066d6); }
-  .logo-costco { background: linear-gradient(135deg,#e31837,#c4142d); }
-  .logo-target { background: linear-gradient(135deg,#cc0000,#ff1a1a); }
-  .logo-walmart { background: linear-gradient(135deg,#0071ce,#0084e8); }
-  .deal-card .title { font-size: 13.5px; font-weight: 600; color: var(--ink); margin: 0; line-height: 1.4; }
-  .deal-card .meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-  .deal-card .meta strong { color: var(--green); font-weight: 600; }
-  .deal-card .meta .was { text-decoration: line-through; margin-right: 6px; }
-  .deal-card .right { text-align: right; }
-  .deal-card .price { font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
-  .deal-card .code {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11.5px; font-weight: 500;
-    background: var(--green-soft); color: var(--green);
-    padding: 3px 8px; border-radius: 6px;
-    margin-top: 4px;
-  }
-  .more-deals { font-size: 13px; color: var(--ink-3); margin-top: 12px; }
-  .more-deals strong { color: var(--ink-2); font-weight: 600; }
-
-  /* Sections */
-  section.block { padding: 76px 0; border-top: 1px solid var(--line); }
-  .eyebrow {
-    font-size: 13px; font-weight: 600;
-    color: var(--brand);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 14px;
-  }
-  h2.section-title {
-    font-weight: 700;
-    font-size: clamp(30px, 4vw, 42px);
-    line-height: 1.1;
-    letter-spacing: -0.025em;
-    margin: 0 0 16px;
-  }
-  h2.section-title em { font-style: normal; color: var(--brand); }
-  .section-lede {
-    font-size: 17px;
-    color: var(--ink-2);
-    max-width: 620px;
-    margin-bottom: 44px;
-  }
-
-  /* Install grid */
-  .install-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
-  @media (max-width: 880px) { .install-grid { grid-template-columns: 1fr; } }
-  .install-card {
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 22px;
-    display: flex; flex-direction: column;
-    transition: border-color .12s, transform .12s;
-  }
-  .install-card:hover { border-color: var(--brand); transform: translateY(-2px); }
-  .install-card h3 {
-    font-size: 15px; font-weight: 700;
-    margin: 0 0 4px; display: flex; align-items: center; gap: 10px;
-  }
-  .install-card .icon {
-    width: 28px; height: 28px; border-radius: 8px;
-    display: inline-grid; place-items: center; color: white;
-  }
-  .icon-claude { background: linear-gradient(135deg,#d97757,#e07a35); }
-  .icon-chatgpt { background: linear-gradient(135deg,#10a37f,#1ec48d); }
-  .icon-cursor { background: linear-gradient(135deg,#1e1e2c,#2d2d4a); }
-  .install-card .availability {
-    font-size: 12px; color: var(--ink-3); margin-bottom: 14px;
-  }
-  pre.snippet {
-    margin: 0 0 14px;
-    background: #14131f; color: #e8e5f5;
-    padding: 14px 16px; border-radius: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; line-height: 1.6;
-    overflow-x: auto;
-    position: relative; flex: 1;
-  }
-  pre.snippet .copy {
-    position: absolute; top: 8px; right: 8px;
-    font-size: 10.5px; padding: 4px 10px;
-    background: rgba(255,255,255,0.07); color: #e8e5f5;
-    border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 6px; cursor: pointer; font-family: inherit;
-    transition: background .12s;
-  }
-  pre.snippet .copy:hover { background: rgba(255,255,255,0.18); }
-  pre.snippet .copy.ok { background: rgba(47,158,107,0.32); }
-  .install-card .help { font-size: 13px; color: var(--ink-3); margin: 0; }
-  .install-card .help a { color: var(--ink-2); border-bottom: 1px solid var(--line); }
-  .install-card .help a:hover { color: var(--ink); border-color: var(--ink); }
-
-  /* Stats strip */
-  .stats {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-    background: var(--ink); color: var(--bg-card);
-    border-radius: 18px;
-    overflow: hidden;
-    margin-top: 36px;
-  }
-  @media (max-width: 700px) { .stats { grid-template-columns: 1fr; } }
-  .stat { padding: 28px 24px; }
-  .stat:not(:last-child) {
-    border-right: 1px solid rgba(255,255,255,0.08);
-  }
-  @media (max-width: 700px) { .stat:not(:last-child) { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); } }
-  .stat .num {
-    font-size: 36px; font-weight: 800;
-    letter-spacing: -0.025em;
-    margin-bottom: 4px;
-    color: white;
-  }
-  .stat .num .accent { color: var(--brand-2); }
-  .stat .label { font-size: 13px; color: rgba(255,255,255,0.6); font-weight: 500; }
-
-  /* Features */
-  .features-grid {
-    display: grid; gap: 16px;
-    grid-template-columns: repeat(3, 1fr);
-  }
-  @media (max-width: 880px) { .features-grid { grid-template-columns: 1fr; } }
-  .feature {
+  /* ---------- Live demo card (hero right) ---------- */
+  .demo-card {
     background: var(--bg-card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 26px;
-    transition: border-color .12s;
+    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 30px 80px rgba(90,79,207,0.13);
   }
-  .feature:hover { border-color: var(--brand); }
-  .feature .ficon {
-    width: 38px; height: 38px; border-radius: 10px;
-    background: var(--brand-soft); color: var(--brand);
+  .demo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .demo-head .logo-mark { width: 26px; height: 26px; }
+  .demo-head .name { font-weight: 700; font-size: 15px; }
+  .demo-input {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px;
+    background: white; border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+  .demo-input .input-fake {
+    flex: 1; padding: 8px 10px; display: flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--ink-3);
+  }
+  .demo-input .input-fake svg { width: 14px; height: 14px; color: var(--ink-3); }
+  .demo-input .send {
     display: inline-grid; place-items: center;
-    margin-bottom: 14px;
+    width: 34px; height: 34px; border-radius: 8px;
+    background: var(--brand); color: white;
+    box-shadow: 0 2px 0 rgba(90,79,207,0.20);
   }
-  .feature .ficon svg { width: 18px; height: 18px; }
-  .feature h3 { font-size: 16px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.01em; }
-  .feature p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
+  .demo-input .send svg { width: 14px; height: 14px; }
 
-  /* Waitlist */
-  .waitlist-card {
-    background: linear-gradient(135deg, #1d1a32, #14131f);
-    color: var(--bg-card);
-    border-radius: 20px;
-    padding: 48px 44px;
-    margin-top: 12px;
+  .progress-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+  .progress-item { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--ink-2); }
+  .progress-item .ring {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: inline-grid; place-items: center; flex-shrink: 0;
+  }
+  .progress-item.done .ring { background: var(--brand); color: white; }
+  .progress-item.done .ring svg { width: 10px; height: 10px; }
+  .progress-item.done { color: var(--ink); }
+  .progress-item.active .ring {
+    border: 2px solid var(--brand);
+    background: white;
+  }
+  .progress-item.active { color: var(--ink); }
+  .progress-item.pending .ring {
+    border: 2px dashed var(--ink-3);
+    background: transparent;
+  }
+  .progress-item.pending { color: var(--ink-3); }
+
+  /* Seller comparison table */
+  .seller-table {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13.5px;
+  }
+  .seller-table .header {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    padding: 12px 16px;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--line);
+    font-weight: 600; color: var(--ink-2); font-size: 12.5px;
+  }
+  .seller-table .row {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    padding: 14px 16px;
+    border-top: 1px solid var(--line-soft);
+    align-items: center;
+  }
+  .seller-table .row:first-of-type { border-top: none; }
+  .seller-table .row .seller-name { font-weight: 600; }
+  .seller-table .row.best {
+    background: var(--brand-soft-2);
+    color: var(--brand);
+    font-weight: 600;
+  }
+  .seller-table .row.best .seller-name { color: var(--brand); }
+  .seller-table .row.best .badge {
+    font-size: 11px; font-weight: 500; color: var(--brand);
+    display: block; margin-top: 2px;
+  }
+
+  .approve {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+    margin-top: 18px;
+    padding: 14px;
+    background: var(--brand); color: white;
+    border: none; border-radius: 12px;
+    font-family: inherit; font-size: 14.5px; font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(90,79,207,0.20), 0 12px 28px rgba(90,79,207,0.20);
+    transition: transform .12s, box-shadow .12s;
+  }
+  .approve:hover { transform: translateY(-1px); }
+  .approve svg { width: 14px; height: 14px; }
+
+  /* ---------- Generic feature block ---------- */
+  .feature-block {
+    background: var(--bg-soft);
+    border-radius: 22px;
+    padding: 48px;
+    margin-top: 24px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
+  }
+  @media (max-width: 880px) {
+    .feature-block { grid-template-columns: 1fr; padding: 32px; gap: 32px; }
+  }
+  .feature-block.reverse { direction: rtl; }
+  .feature-block.reverse > * { direction: ltr; }
+
+  .feature-block h2 {
+    font-weight: 700;
+    font-size: clamp(30px, 4vw, 38px);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+  }
+  .feature-block p.lede {
+    font-size: 16.5px;
+    color: var(--ink-2);
+    max-width: 420px;
+    margin: 0 0 22px;
+  }
+  .bullet-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .bullet {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 15px; color: var(--ink);
+  }
+  .bullet .check {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--brand); color: white;
+    display: inline-grid; place-items: center; flex-shrink: 0;
+  }
+  .bullet .check svg { width: 12px; height: 12px; }
+
+  /* Chat mockup card */
+  .chat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 26px;
+    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 16px 40px rgba(90,79,207,0.08);
+  }
+  .chat-card .head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-weight: 600; font-size: 15px; }
+  .chat-card .head .logo-mark { width: 26px; height: 26px; }
+  .chat-bubble {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--ink);
+    width: fit-content;
+    max-width: 80%;
+    border: 1px solid var(--line-soft);
+  }
+  .chat-bubble.user {
+    background: var(--brand-soft);
+    color: var(--ink);
+    margin-left: auto;
+    margin-bottom: 12px;
+    border: none;
+  }
+  .chat-bubble.ai { background: white; border: 1px solid var(--line); }
+  .typing {
+    display: inline-flex; gap: 4px; margin-top: 4px;
+  }
+  .typing span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--brand);
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.18s; }
+  .typing span:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes typing {
+    0%, 100% { opacity: 0.3; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* ---------- Install cards ---------- */
+  .install-section { padding: 80px 0 32px; }
+  .install-section h2 {
+    text-align: center; font-weight: 700;
+    font-size: clamp(28px, 3.5vw, 36px);
+    letter-spacing: -0.02em;
+    margin: 0 0 10px;
+  }
+  .install-section .lede {
+    text-align: center; color: var(--ink-2); font-size: 16px; margin: 0 0 36px;
+  }
+  .install-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  @media (max-width: 960px) { .install-grid { grid-template-columns: 1fr; } }
+  .install-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 26px 26px;
+    display: flex; align-items: center; gap: 18px;
+    text-decoration: none;
+    transition: border-color .12s, transform .12s, box-shadow .12s;
+    cursor: pointer;
+  }
+  .install-card:hover {
+    border-color: var(--brand);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(90,79,207,0.12);
+  }
+  .install-card .ico {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: inline-grid; place-items: center;
+    color: white; flex-shrink: 0;
+  }
+  .ico-claude { background: linear-gradient(135deg, #ff7a59 0%, #ff9d80 100%); }
+  .ico-chatgpt { background: linear-gradient(135deg, #10a37f 0%, #19c69b 100%); }
+  .ico-cursor { background: linear-gradient(135deg, #0f0d1f 0%, #2d2a4a 100%); }
+  .install-card .text {
+    flex: 1; display: flex; flex-direction: column; gap: 2px;
+  }
+  .install-card .label { font-size: 16px; font-weight: 700; color: var(--ink); }
+  .install-card .availability { font-size: 12.5px; color: var(--ink-3); }
+  .install-card .arrow {
+    color: var(--ink-3);
+    transition: color .12s, transform .12s;
+  }
+  .install-card:hover .arrow { color: var(--brand); transform: translateX(2px); }
+
+  /* ---------- Waitlist banner ---------- */
+  .waitlist {
+    margin: 64px 0 0;
+    background: linear-gradient(135deg, #1a1632 0%, #0f0d1f 100%);
+    color: white;
+    border-radius: 22px;
+    padding: 52px 48px;
     position: relative; overflow: hidden;
   }
-  .waitlist-card::after {
+  .waitlist::after {
     content: '';
     position: absolute; top: -120px; right: -120px;
     width: 360px; height: 360px;
-    background: radial-gradient(circle, rgba(124,112,232,0.25) 0%, transparent 70%);
-    pointer-events: none;
+    background: radial-gradient(circle, rgba(125,111,240,0.30) 0%, transparent 70%);
   }
-  .waitlist-inner { position: relative; max-width: 560px; }
-  .waitlist-card h3 {
-    font-size: 28px; font-weight: 700; margin: 0 0 10px; letter-spacing: -0.02em;
-  }
-  .waitlist-card p { color: rgba(255,255,255,0.7); margin: 0 0 22px; font-size: 15px; }
-  .waitlist-card form { display: flex; gap: 8px; max-width: 480px; }
-  .waitlist-card input[type=email] {
+  .waitlist h3 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .waitlist p { color: rgba(255,255,255,0.7); margin: 0 0 24px; max-width: 540px; }
+  .waitlist form { display: flex; gap: 8px; max-width: 480px; position: relative; }
+  .waitlist input[type=email] {
     flex: 1;
     padding: 13px 18px;
     font-family: inherit; font-size: 14.5px;
     background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.18);
     color: white;
-    border-radius: 999px;
+    border-radius: 10px;
     outline: none;
     transition: border-color .12s, background .12s;
   }
-  .waitlist-card input[type=email]::placeholder { color: rgba(255,255,255,0.45); }
-  .waitlist-card input[type=email]:focus { border-color: white; background: rgba(255,255,255,0.14); }
-  .waitlist-card button {
+  .waitlist input[type=email]::placeholder { color: rgba(255,255,255,0.45); }
+  .waitlist input[type=email]:focus { border-color: white; background: rgba(255,255,255,0.14); }
+  .waitlist button {
     padding: 13px 24px;
     font-family: inherit; font-size: 14.5px; font-weight: 600;
-    background: white; color: var(--ink);
-    border: none; border-radius: 999px;
+    background: var(--brand); color: white;
+    border: none; border-radius: 10px;
     cursor: pointer;
-    transition: transform .12s;
   }
-  .waitlist-card button:hover { transform: translateY(-1px); }
-  .waitlist-card .status {
-    margin-top: 14px; font-size: 13.5px; color: rgba(255,255,255,0.65);
-    min-height: 1.3em;
-  }
-  .waitlist-card .status.ok { color: #9be5be; }
-  .waitlist-card .status.err { color: #ffb3a8; }
+  .waitlist button:hover { background: var(--brand-2); }
+  .waitlist .status { margin-top: 14px; font-size: 13px; min-height: 1.2em; color: rgba(255,255,255,0.65); position: relative; }
+  .waitlist .status.ok { color: #9be5be; }
+  .waitlist .status.err { color: #ffb3a8; }
 
-  /* Footer */
-  footer { padding: 48px 0 56px; color: var(--ink-3); font-size: 13.5px; }
-  footer .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
-  footer .links { display: flex; gap: 22px; }
-  footer a { color: var(--ink-3); }
-  footer a:hover { color: var(--ink); }
+  /* ---------- Footer ---------- */
+  footer { padding: 72px 0 56px; border-top: 1px solid var(--line); margin-top: 64px; }
+  footer .row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 32px; }
+  @media (max-width: 760px) { footer .row { grid-template-columns: 1fr 1fr; gap: 24px; } }
+  footer h4 { font-size: 14px; font-weight: 700; margin: 0 0 14px; color: var(--ink); }
+  footer .links a { display: block; font-size: 13.5px; color: var(--ink-2); padding: 4px 0; }
+  footer .links a:hover { color: var(--ink); }
+  footer .col-brand { display: flex; flex-direction: column; gap: 6px; }
+  footer .col-brand .tag { color: var(--ink-3); font-size: 13px; }
+  footer .live-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--ink-3);
+    padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px;
+    margin-top: 10px;
+    width: fit-content;
+  }
+  footer .live-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    animation: dot-pulse 2.4s ease-out infinite;
+  }
+  @keyframes dot-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(31,157,107,0.6); }
+    100% { box-shadow: 0 0 0 8px rgba(31,157,107,0); }
+  }
 </style>
 </head>
 <body>
@@ -422,199 +456,273 @@ export function landingHtml(data: LandingData = {}): string {
 <header>
   <div class="container row">
     <a class="logo" href="/">
-      <span class="logo-mark">S</span>
-      Snap-AI
+      <span class="logo-mark"></span>
+      shopdeals
     </a>
     <nav class="nav">
       <a href="#how">How it works</a>
+      <a href="#trust">Safety</a>
       <a href="#install">Install</a>
-      <a class="nav-cta" href="#waitlist">Get notified</a>
+      <a class="nav-cta" href="#install">Get started</a>
     </nav>
   </div>
 </header>
 
 <section class="hero">
   <div class="container">
-    <div class="hero-inner">
+    <div class="hero-grid">
       <div>
-        <span class="hero-tag">${ingestStatus} · ${dealCount} deals live</span>
-        <h1 class="hero-title">Find good deals online with <em>your AI.</em></h1>
-        <p class="hero-sub">Tell Claude, ChatGPT, or Cursor what you want. Snap-AI hands them working codes and live prices — you save money without thinking about it. Free.</p>
+        <h1 class="hero-title">Your AI shopping agent.</h1>
+        <p class="hero-sub">Ask Claude or ChatGPT for what you want. shopdeals compares trusted sellers, surfaces working coupon codes, and hands back the best deal in seconds.</p>
         <div class="cta-row">
-          <a class="btn" href="#install">Add to your AI →</a>
-          <a class="btn btn-ghost" href="#how">See how it works</a>
-        </div>
-        <div class="trust-row">
-          <span><span class="dot"></span>Free, no signup</span>
-          <span><span class="dot"></span>Verified codes</span>
-          <span><span class="dot"></span>Real merchant links</span>
+          <a class="btn-primary" href="#install">Get started free</a>
+          <a class="btn-ghost" href="#how">See how it works</a>
         </div>
       </div>
 
-      <div class="chat" aria-hidden="true">
-        <div class="chat-head">
-          <span class="tab-dot r"></span>
-          <span class="tab-dot y"></span>
-          <span class="tab-dot g"></span>
-          <span class="title">claude · snap-ai connected</span>
+      <div class="demo-card" aria-hidden="true">
+        <div class="demo-head">
+          <span class="logo-mark"></span>
+          <span class="name">shopdeals</span>
         </div>
-        <div class="msg">
-          <span class="msg-avatar user">U</span>
-          <div class="msg-bubble">Find me a deal on AirPods Pro</div>
+        <div class="demo-input">
+          <div class="input-fake">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            <span>Find me the best deal on AirPods Pro</span>
+          </div>
+          <span class="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
-        <div class="msg ai">
-          <span class="msg-avatar ai">AI</span>
-          <div class="msg-bubble">
-            <p class="lead">Here's the best price I found right now:</p>
-            <div class="deal-card">
-              <span class="merchant-logo logo-amazon">A</span>
-              <div>
-                <p class="title">Apple AirPods Pro (2nd&nbsp;Gen) with USB-C</p>
-                <p class="meta"><span class="was">$249</span><strong>save $60</strong> · in stock</p>
-                <span class="code">code: SAVE60</span>
-              </div>
-              <div class="right">
-                <div class="price">$189</div>
-              </div>
-            </div>
-            <div class="deal-card">
-              <span class="merchant-logo logo-bestbuy">BB</span>
-              <div>
-                <p class="title">AirPods Pro 2 · open-box</p>
-                <p class="meta"><span class="was">$249</span><strong>save $50</strong> · ships free</p>
-              </div>
-              <div class="right">
-                <div class="price">$199</div>
-              </div>
-            </div>
-            <div class="more-deals">+ 2 more from <strong>Costco</strong> and <strong>Target</strong>.</div>
+
+        <div class="progress-list">
+          <div class="progress-item done">
+            <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            Query received
+          </div>
+          <div class="progress-item done">
+            <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            Checking ${merchantCount} trusted sellers
+          </div>
+          <div class="progress-item active">
+            <span class="ring"></span>
+            Cross-matching coupon codes
+          </div>
+          <div class="progress-item pending">
+            <span class="ring"></span>
+            Best deal ready
           </div>
         </div>
+
+        <div class="seller-table">
+          <div class="header">
+            <div>Seller</div><div>Total</div><div>Code</div><div>Shipping</div>
+          </div>
+          <div class="row">
+            <div class="seller-name">Best Buy</div>
+            <div>$199.99</div>
+            <div>—</div>
+            <div>Free</div>
+          </div>
+          <div class="row best">
+            <div class="seller-name">Amazon<span class="badge">Best overall deal</span></div>
+            <div>$179.99</div>
+            <div>SAVE20</div>
+            <div>Free Prime</div>
+          </div>
+          <div class="row">
+            <div class="seller-name">Costco</div>
+            <div>$189.00</div>
+            <div>—</div>
+            <div>$4.99</div>
+          </div>
+        </div>
+
+        <button class="approve" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg>
+          Open at Amazon
+        </button>
       </div>
     </div>
   </div>
 </section>
 
-<section class="block" id="how">
+<section id="how">
   <div class="container">
-    <div class="eyebrow">How it works</div>
-    <h2 class="section-title">Three things <em>your AI</em> didn't have before.</h2>
-    <p class="section-lede">Snap-AI is a small server your agent talks to. It pulls deal feeds from affiliate networks, community-curated sites, and live shopping search — then hands your AI the codes and links that actually work.</p>
-    <div class="features-grid">
-      <div class="feature">
-        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
-        <h3>Search every store at once.</h3>
-        <p>Filter by merchant, price, category, country. We index thousands of deals across 80+ affiliate networks plus Google Shopping fallback.</p>
+    <div class="feature-block">
+      <div class="chat-card">
+        <div class="head"><span class="logo-mark"></span>shopdeals</div>
+        <div class="chat-bubble user">Find me a deal on AirPods Pro</div>
+        <div class="chat-bubble ai">
+          On it! Comparing ${merchantCount} sellers and our coupon catalog now.
+          <div class="typing"><span></span><span></span><span></span></div>
+        </div>
       </div>
-      <div class="feature">
-        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
-        <h3>Real working codes.</h3>
-        <p>Codes come from merchant-verified affiliate feeds. Every checkout pings us — codes that stop working get pulled automatically.</p>
-      </div>
-      <div class="feature">
-        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-        <h3>Built for speed.</h3>
-        <p>Median <strong>4&nbsp;ms</strong> search. Your AI gets answers as fast as it can ask. No webview, no scraping, no waiting.</p>
+      <div>
+        <h2>Ask in plain English.</h2>
+        <p class="lede">Tell your AI what you're shopping for — it pings shopdeals, which compares sellers across our catalog and live Google Shopping, then hands back the best buy.</p>
+        <ul class="bullet-list">
+          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Works inside Claude, ChatGPT, and Cursor</li>
+          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>No checkout takeover — you click the buy</li>
+          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Free forever for shoppers</li>
+        </ul>
       </div>
     </div>
-    <div class="stats">
-      <div class="stat"><div class="num"><span class="accent">${dealCount}</span></div><div class="label">deals indexed right now</div></div>
-      <div class="stat"><div class="num"><span class="accent">${merchantCount}</span></div><div class="label">merchants with active deals</div></div>
-      <div class="stat"><div class="num"><span class="accent">~4ms</span></div><div class="label">median search latency</div></div>
+
+    <div class="feature-block reverse" id="trust">
+      <div class="seller-table" style="background: white;">
+        <div class="header">
+          <div>Seller</div><div>Total</div><div>Code</div><div>Shipping</div>
+        </div>
+        <div class="row">
+          <div class="seller-name">Best Buy</div>
+          <div>$199.99</div>
+          <div>—</div>
+          <div>Free</div>
+        </div>
+        <div class="row best">
+          <div class="seller-name">Amazon<span class="badge">Best overall deal</span></div>
+          <div>$179.99</div>
+          <div>SAVE20</div>
+          <div>Free Prime</div>
+        </div>
+        <div class="row">
+          <div class="seller-name">Costco</div>
+          <div>$189.00</div>
+          <div>—</div>
+          <div>$4.99</div>
+        </div>
+      </div>
+      <div>
+        <h2>See the full deal.</h2>
+        <p class="lede">shopdeals compares total price, shipping, returns policy, and the code that actually applies — so the agent's answer is something you can act on, not a guess.</p>
+        <ul class="bullet-list">
+          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Merchant-verified codes (no scrape guesses)</li>
+          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Total price with shipping &amp; tax visible</li>
+          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Agent telemetry kills codes that stop working</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="block" id="install">
+<section class="install-section" id="install">
   <div class="container">
-    <div class="eyebrow">Install</div>
-    <h2 class="section-title">Add Snap-AI to <em>your AI</em> in 60 seconds.</h2>
-    <p class="section-lede">Pick your assistant. Paste one snippet. Done. No account, no API key — free while we're early.</p>
+    <h2>Use it where you already work.</h2>
+    <p class="lede">Start instantly from your favorite AI workspace.</p>
     <div class="install-grid">
-      <div class="install-card">
-        <h3><span class="icon icon-claude"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a6 6 0 110 12 6 6 0 010-12z"/></svg></span>Claude Desktop</h3>
-        <div class="availability">macOS &amp; Windows · works today</div>
-<pre class="snippet"><button class="copy" data-copy="claude">Copy</button><span id="claude-snippet">{
-  "mcpServers": {
-    "snap-ai": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote",
-               "https://mcp.snap-ai.dev/mcp"]
-    }
-  }
-}</span></pre>
-        <p class="help">Paste into <a href="https://docs.anthropic.com/en/docs/claude-code/mcp" target="_blank" rel="noopener">claude_desktop_config.json</a>, restart Claude.</p>
-      </div>
-      <div class="install-card">
-        <h3><span class="icon icon-chatgpt"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.45a4 4 0 00-3.45-2A4 4 0 0015.56 9 4 4 0 0012 7a4 4 0 00-3.56 2A4 4 0 005.17 7.45a4 4 0 00-3.45 2 4 4 0 00.45 4.55l9.1 8.55a1 1 0 001.46 0l9.1-8.55a4 4 0 00.45-4.55z"/></svg></span>ChatGPT</h3>
-        <div class="availability">Custom Connectors · Plus/Pro</div>
-<pre class="snippet"><button class="copy" data-copy="chatgpt">Copy</button><span id="chatgpt-snippet">https://mcp.snap-ai.dev/mcp
-
-Settings → Connectors →
-Add custom connector → paste URL</span></pre>
-        <p class="help">Connectors are a paid-plan feature on chatgpt.com. Same URL — different UI.</p>
-      </div>
-      <div class="install-card">
-        <h3><span class="icon icon-cursor"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4l9 5 9-5v3l-9 5-9-5V4zm0 7l9 5 9-5v3l-9 5-9-5v-3z"/></svg></span>Cursor</h3>
-        <div class="availability">macOS · Windows · Linux</div>
-<pre class="snippet"><button class="copy" data-copy="cursor">Copy</button><span id="cursor-snippet">{
-  "mcpServers": {
-    "snap-ai": {
-      "url": "https://mcp.snap-ai.dev/mcp"
-    }
-  }
-}</span></pre>
-        <p class="help">Paste into <code>~/.cursor/mcp.json</code> — agent picks it up immediately.</p>
-      </div>
+      <a class="install-card" href="#" id="install-claude">
+        <span class="ico ico-claude"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a6 6 0 110 12 6 6 0 010-12z"/></svg></span>
+        <div class="text">
+          <span class="label">Add to Claude</span>
+          <span class="availability">Claude Desktop &amp; web — free</span>
+        </div>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="install-card" href="#" id="install-chatgpt">
+        <span class="ico ico-chatgpt"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.45a4 4 0 00-3.45-2A4 4 0 0015.56 9 4 4 0 0012 7a4 4 0 00-3.56 2A4 4 0 005.17 7.45a4 4 0 00-3.45 2 4 4 0 00.45 4.55l9.1 8.55a1 1 0 001.46 0l9.1-8.55a4 4 0 00.45-4.55z"/></svg></span>
+        <div class="text">
+          <span class="label">Add to ChatGPT instantly</span>
+          <span class="availability">via Custom Connectors · Plus / Pro</span>
+        </div>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="install-card" href="#" id="install-cursor">
+        <span class="ico ico-cursor"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4l9 5 9-5v3l-9 5-9-5V4zm0 7l9 5 9-5v3l-9 5-9-5v-3z"/></svg></span>
+        <div class="text">
+          <span class="label">Add to Cursor</span>
+          <span class="availability">macOS · Windows · Linux</span>
+        </div>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
     </div>
   </div>
 </section>
 
-<section class="block" id="waitlist">
-  <div class="container">
-    <div class="waitlist-card">
-      <div class="waitlist-inner">
-        <h3>Get a heads-up when we launch big.</h3>
-        <p>We're shipping every few days. Drop your email — we'll ping you when we open up early access on a hosted endpoint and again if we ship something noteworthy. No newsletter, no upsell.</p>
-        <form id="waitlist-form" novalidate>
-          <input id="waitlist-email" type="email" required placeholder="your@email.com" autocomplete="email" />
-          <button type="submit">Get notified</button>
-        </form>
-        <div class="status" id="waitlist-status" aria-live="polite"></div>
-      </div>
-    </div>
+<section class="container">
+  <div class="waitlist" id="waitlist">
+    <h3>Get a heads-up when we launch big.</h3>
+    <p>We're shipping every few days. Drop your email — one note when the hosted endpoint opens up early access. No newsletter, no upsell.</p>
+    <form id="waitlist-form" novalidate>
+      <input id="waitlist-email" type="email" required placeholder="your@email.com" autocomplete="email" />
+      <button type="submit">Notify me</button>
+    </form>
+    <div class="status" id="waitlist-status" aria-live="polite"></div>
   </div>
 </section>
 
 <footer>
   <div class="container row">
-    <div>© 2026 Snap-AI · MIT licensed · made for agents</div>
-    <div class="links">
-      <a href="https://github.com/idanmann10/snap-ai" rel="noopener">GitHub</a>
-      <a href="/api">API</a>
-      <a href="/healthz">Status</a>
+    <div class="col-brand">
+      <a class="logo" href="/">
+        <span class="logo-mark"></span>
+        shopdeals
+      </a>
+      <span class="tag">Your AI shopping agent.</span>
+      <span class="live-pill"><span class="dot"></span>${ingestStatus} · ${dealCount} deals</span>
+    </div>
+    <div>
+      <h4>Product</h4>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="#trust">Safety</a>
+        <a href="#install">Install</a>
+      </div>
+    </div>
+    <div>
+      <h4>Company</h4>
+      <div class="links">
+        <a href="https://github.com/idanmann10/snap-ai">GitHub</a>
+        <a href="mailto:hello@shopdeals.sh">Contact</a>
+      </div>
+    </div>
+    <div>
+      <h4>Developers</h4>
+      <div class="links">
+        <a href="/api">API</a>
+        <a href="/healthz">Status</a>
+      </div>
     </div>
   </div>
 </footer>
 
+<!-- Modal openers for install snippets. Lightweight: just copy the snippet
+     to clipboard and notify, no real modal. -->
 <script>
-  document.querySelectorAll('button.copy').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const key = btn.getAttribute('data-copy');
-      const node = document.getElementById(key + '-snippet');
-      if (!node) return;
+  const SNIPPETS = {
+    'install-claude': \`{
+  "mcpServers": {
+    "shopdeals": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.shopdeals.sh/mcp"]
+    }
+  }
+}\`,
+    'install-chatgpt': 'https://mcp.shopdeals.sh/mcp\\n\\nSettings → Connectors → Add custom connector → paste URL',
+    'install-cursor': \`{
+  "mcpServers": {
+    "shopdeals": {
+      "url": "https://mcp.shopdeals.sh/mcp"
+    }
+  }
+}\`,
+  };
+  for (const [id, snippet] of Object.entries(SNIPPETS)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.addEventListener('click', async (e) => {
+      e.preventDefault();
       try {
-        await navigator.clipboard.writeText(node.textContent || '');
-        const orig = btn.textContent;
-        btn.textContent = 'Copied';
-        btn.classList.add('ok');
-        setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1400);
+        await navigator.clipboard.writeText(snippet);
+        const label = el.querySelector('.label');
+        const orig = label.textContent;
+        label.textContent = 'Copied to clipboard';
+        setTimeout(() => { label.textContent = orig; }, 1400);
       } catch {
-        btn.textContent = 'Press Cmd+C';
+        alert(snippet);
       }
     });
-  });
+  }
 
+  // Waitlist submit
   const form = document.getElementById('waitlist-form');
   const statusEl = document.getElementById('waitlist-status');
   form?.addEventListener('submit', async (e) => {
