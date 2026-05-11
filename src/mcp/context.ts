@@ -1,6 +1,7 @@
 import type { Db } from '../db/client.ts';
 import type { KeepaClient } from '../sources/keepa.ts';
 import type { createAffiliateRewriter } from '../lib/affiliate.ts';
+import type { SerpApiClient } from '../lib/serpapi.ts';
 
 /**
  * Per-request execution context for an MCP tool handler.
@@ -24,4 +25,7 @@ export interface McpContext {
   scopes: string[];
   keepa?: KeepaClient;
   affiliate?: ReturnType<typeof createAffiliateRewriter>;
+  /** Live shopping search backend. find_products uses this; everyone else
+   * ignores it. Tests pass an in-memory stub. */
+  serpapi?: SerpApiClient;
 }

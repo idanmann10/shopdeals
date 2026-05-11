@@ -29,9 +29,19 @@ const envSchema = z.object({
 
   VOYAGE_API_KEY: z.string().optional(),
 
-  // Affiliate / monetization tags. When set, find_deals and get_deal will
+  // Affiliate / monetization tags. When set, find_deals / get_deal / find_products
   // rewrite outbound URLs through them. See src/lib/affiliate.ts.
   AMAZON_ASSOCIATES_TAG: z.string().optional(),
+
+  // CouponAPI.org — paid coupon catalog (free 7-day trial). When set, the
+  // ingest cron pulls it. See src/sources/couponapi.ts.
+  COUPONAPI_KEY: z.string().optional(),
+  COUPONAPI_BASE_URL: z.string().url().optional(),
+  COUPONAPI_COUNTRY: z.string().length(2).optional(),
+
+  // SerpApi — live Google Shopping fallback for find_products. When set,
+  // find_products returns real results; otherwise it returns a note.
+  SERPAPI_KEY: z.string().optional(),
 
   MCP_PUBLIC_URL: z.string().url().default('http://localhost:3000'),
   MCP_OAUTH_ISSUER: z.string().url().default('http://localhost:3000'),

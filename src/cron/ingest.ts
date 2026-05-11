@@ -17,7 +17,7 @@ import { getAdapter, getAllAdapters } from '../sources/index.ts';
 import { upsertDeals } from '../sources/upsert.ts';
 import { runLifecyclePass } from './lifecycle.ts';
 
-const KNOWN = new Set(['fmtc', 'awin', 'impact', 'slickdeals', 'all']);
+const KNOWN = new Set(['fmtc', 'awin', 'impact', 'couponapi', 'slickdeals', 'all']);
 
 function pickAdapters(arg: string | undefined): SourceAdapter[] {
   const target = (arg ?? 'all').toLowerCase();
