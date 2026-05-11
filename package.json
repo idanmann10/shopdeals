@@ -29,7 +29,8 @@
     "ingest": "tsx src/cron/ingest.ts",
     "ingest:prod": "node dist/cron/ingest.js",
     "start:prod": "npm run db:migrate:prod && npm run db:seed:prod && node dist/index.js",
-    "mcp:smoke": "tsx test/smoke.ts"
+    "mcp:smoke": "tsx test/smoke.ts",
+    "eval": "tsx eval/run.ts"
   },
   "dependencies": {
     "@clerk/backend": "^1.21.0",

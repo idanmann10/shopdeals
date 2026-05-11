@@ -36,6 +36,11 @@ vi.mock('../../src/db/client.ts', () => {
   return {
     db: () => ({
       insert: vi.fn(() => insertChain),
+      // The landing stats query uses `execute` directly. Return zeros so
+      // the `/` route renders the placeholder strip without hitting a real DB.
+      execute: vi.fn(async () => ({
+        rows: [{ deal_count: 0, merchant_count: 0, last_ingest_hours_ago: null }],
+      })),
     }),
     closeDb: vi.fn(async () => undefined),
     pool: vi.fn(),
@@ -60,8 +65,11 @@ describe('landing page', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     const body = await res.text();
-    expect(body).toContain('snap');
-    expect(body).toContain('coupon');
+    expect(body).toContain('snap-ai');
+    // Three integration cards must all render.
+    expect(body).toContain('Claude Desktop');
+    expect(body).toContain('ChatGPT');
+    expect(body).toContain('Cursor');
     // Waitlist form must be rendered with the expected ids the JS hooks into.
     expect(body).toContain('id="waitlist-form"');
     expect(body).toContain('id="waitlist-email"');

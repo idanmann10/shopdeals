@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   SlickdealsAdapter,
   extractMerchant,
+  extractMerchantUrl,
   mapSlickdealsItem,
   parseRssItems,
 } from '../../src/sources/slickdeals.ts';
@@ -71,20 +72,28 @@ describe('SlickdealsAdapter', () => {
       expect(d.sourceNetwork).toBe('slickdeals');
       expect(d.kind).toBe('sale');
       expect(d.attributionSource).toBe('slickdeals');
-      expect(d.deeplink).toMatch(/slickdeals\.net\/f\//);
+      // Deeplink prefers the actual merchant URL when discoverable.
+      expect(d.deeplink).toBeDefined();
+      expect(d.deeplink).not.toMatch(/slickdeals\.net\/click/);
+      // The community thread URL is retained in sourceMeta for attribution.
+      expect((d.sourceMeta as Record<string, string>)?.['communityUrl']).toMatch(
+        /slickdeals\.net\/f\//,
+      );
       // Slickdeals isn't a code feed.
       expect(d.code).toBeUndefined();
     }
 
-    // 1. data-store-slug "amazon" -> "Amazon"
+    // 1. data-store-slug "amazon" -> "Amazon"; deeplink is the merchant URL
     const dawn = out.find((d) => d.sourceId === 'thread-11111');
     expect(dawn?.merchant.slug).toBe('amazon');
     expect(dawn?.merchant.displayName).toBe('Amazon');
+    expect(dawn?.deeplink).toMatch(/^https:\/\/www\.amazon\.com\/dp\//);
 
-    // 2. data-store-slug "the-home-depot" -> "The Home Depot"
+    // 2. data-store-slug "the-home-depot" -> "The Home Depot"; merchant URL deeplink
     const ryobi = out.find((d) => d.sourceId === 'thread-22222');
     expect(ryobi?.merchant.slug).toBe('the-home-depot');
     expect(ryobi?.merchant.displayName).toBe('The Home Depot');
+    expect(ryobi?.deeplink).toMatch(/^https:\/\/www\.homedepot\.com\/p\//);
 
     // 3. Fallback: "REI has Patagonia..." text pattern -> "REI"
     const patagonia = out.find((d) => d.sourceId === 'thread-33333');
@@ -183,6 +192,58 @@ describe('extractMerchant', () => {
       description: 'Visit https://slickdeals.net/forum/12345 for details.',
     });
     expect(m).toBeNull();
+  });
+});
+
+describe('extractMerchantUrl', () => {
+  it('prefers an href on an anchor with data-product-exitWebsite', () => {
+    const url = extractMerchantUrl({
+      contentEncoded:
+        '<a href="https://www.amazon.com/dp/B0G35QW98H" data-product-exitWebsite="amazon.com">x</a>',
+    });
+    expect(url).toBe('https://www.amazon.com/dp/B0G35QW98H');
+  });
+
+  it('falls back to the first non-slickdeals URL in description text', () => {
+    const url = extractMerchantUrl({
+      description: 'Deal at https://www.bestbuy.com/site/sony/123 right now',
+    });
+    expect(url).toBe('https://www.bestbuy.com/site/sony/123');
+  });
+
+  it('ignores slickdeals.net / slickdealscdn.com URLs', () => {
+    const url = extractMerchantUrl({
+      description: 'See https://slickdeals.net/click?lno=1 for image https://static.slickdealscdn.com/x.png',
+    });
+    expect(url).toBeUndefined();
+  });
+
+  it('decodes &amp; entities in attribute hrefs', () => {
+    const url = extractMerchantUrl({
+      contentEncoded:
+        '<a href="https://www.amazon.com/dp/B0X?ref=foo&amp;bar=1" data-product-exitWebsite="amazon.com">x</a>',
+    });
+    expect(url).toBe('https://www.amazon.com/dp/B0X?ref=foo&bar=1');
+  });
+
+  it('strips trailing punctuation from naked URLs', () => {
+    const url = extractMerchantUrl({
+      description: 'Available at https://www.target.com/p/widget/123.',
+    });
+    expect(url).toBe('https://www.target.com/p/widget/123');
+  });
+
+  it('returns undefined when no merchant URL is present', () => {
+    expect(extractMerchantUrl({})).toBeUndefined();
+    expect(extractMerchantUrl({ description: 'pure text, no URLs' })).toBeUndefined();
+  });
+
+  it('synthesizes an Amazon /dp/ URL from a data-aps-asin attribute', () => {
+    const url = extractMerchantUrl({
+      contentEncoded:
+        '<a href="https://slickdeals.net/click?lno=1" data-store-slug="amazon" data-aps-asin="B0BW9WK4XP">Amazon</a>',
+    });
+    expect(url).toBe('https://www.amazon.com/dp/B0BW9WK4XP');
   });
 });
 

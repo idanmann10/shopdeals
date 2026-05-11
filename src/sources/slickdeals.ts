@@ -303,10 +303,102 @@ function displayNameForSlug(slug: string): string {
 }
 
 /**
+ * Pull the first outbound merchant URL from a content:encoded HTML body.
+ * Slickdeals wraps every retailer link as a `https://slickdeals.net/click?...`
+ * redirector; the real destination is whatever the user lands on after the
+ * redirect. For affiliate purposes the more useful URL is the `href` of an
+ * anchor that has a `data-product-exitWebsite` attribute — that's the raw
+ * merchant URL Slickdeals knows it points to, even when wrapped in their
+ * click tracker.
+ *
+ * Strategy:
+ *   1. Find any `<a ... href="X" ...>` where the same tag has a
+ *      `data-product-exitWebsite="merchant.com"`. If `X` is an outbound
+ *      merchant URL (not a slickdeals.net click-tracker), use it.
+ *   2. Failing that, find the first non-slickdeals https URL anywhere in
+ *      the description text or content body.
+ *
+ * Returns `undefined` when no merchant URL is found — callers fall back to
+ * the Slickdeals thread URL.
+ */
+export function extractMerchantUrl(item: SlickdealsRssItem): string | undefined {
+  const html = item.contentEncoded ?? '';
+  const desc = item.description ?? '';
+
+  // Pass 1: href on an anchor that has a data-product-exitWebsite. Quoted
+  // attributes can appear in either order, so we match either layout.
+  const anchorRe = /<a\b([^>]*)>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = anchorRe.exec(html))) {
+    const attrs = m[1] ?? '';
+    if (!/data-product-exit[Ww]ebsite=["'][^"']+["']/.test(attrs)) continue;
+    const hrefMatch = attrs.match(/\bhref=["']([^"']+)["']/);
+    const href = hrefMatch?.[1];
+    if (!href) continue;
+    const url = decodeEntitiesShort(href);
+    if (!isUsableMerchantUrl(url)) continue;
+    return url;
+  }
+
+  // Pass 2: Amazon-specific reconstruction. Slickdeals wraps every Amazon
+  // click in `slickdeals.net/click?...`, but it also stamps a
+  // `data-aps-asin="B0XXXXXX"` attribute on the anchor. When we see one,
+  // we can synthesize the direct product URL ourselves.
+  const asinAnchorRe = /<a\b([^>]*)>/gi;
+  let a: RegExpExecArray | null;
+  while ((a = asinAnchorRe.exec(html))) {
+    const attrs = a[1] ?? '';
+    const asinMatch = attrs.match(/\bdata-aps-asin=["']([A-Z0-9]{10})["']/i);
+    if (!asinMatch?.[1]) continue;
+    return `https://www.amazon.com/dp/${asinMatch[1].toUpperCase()}`;
+  }
+
+  // Pass 3: first https://merchant URL in description or HTML body.
+  for (const text of [desc, html]) {
+    const urlRe = /https:\/\/[^\s<>"']+/gi;
+    let u: RegExpExecArray | null;
+    while ((u = urlRe.exec(text))) {
+      const candidate = decodeEntitiesShort(u[0]).replace(/[.,)\]]+$/, '');
+      if (isUsableMerchantUrl(candidate)) return candidate;
+    }
+  }
+
+  return undefined;
+}
+
+function isUsableMerchantUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    const host = parsed.hostname.toLowerCase();
+    if (host.endsWith('slickdeals.net') || host === 'slickdeals.net') return false;
+    if (host.endsWith('slickdealscdn.com')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function decodeEntitiesShort(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+/**
  * Map a single parsed RSS item to a `RawDealInput`. Returns `null` when:
  *   - the title is missing / too short
  *   - no merchant can be extracted
  *   - we have no stable identifier (`guid` or `link`)
+ *
+ * Deeplink strategy: prefer the actual merchant URL (so the agent / user
+ * lands on the buy page directly, and the affiliate-rewriting layer can
+ * monetize), with the Slickdeals thread URL as a fallback. The thread
+ * URL is also retained in `sourceMeta.communityUrl` for attribution.
  */
 export function mapSlickdealsItem(item: SlickdealsRssItem): RawDealInput | null {
   const title = item.title?.trim();
@@ -322,11 +414,13 @@ export function mapSlickdealsItem(item: SlickdealsRssItem): RawDealInput | null 
   const parsed = parseDiscountFromText(`${title} ${descText}`.trim());
 
   const pubDate = toDate(item.pubDate);
+  const merchantUrl = extractMerchantUrl(item);
 
   const sourceMeta: Record<string, unknown> = { rawTitle: title };
   if (item.category) sourceMeta['category'] = item.category;
   if (descText) sourceMeta['descriptionText'] = descText.slice(0, 2000);
   if (item.guid) sourceMeta['guid'] = item.guid;
+  if (item.link) sourceMeta['communityUrl'] = item.link;
 
   const out: RawDealInput = {
     sourceNetwork: 'slickdeals',
@@ -345,7 +439,10 @@ export function mapSlickdealsItem(item: SlickdealsRssItem): RawDealInput | null 
   if (descText) out.description = descText.slice(0, 4000);
   if (parsed.discountValueBps !== undefined) out.discountValueBps = parsed.discountValueBps;
   if (parsed.discountValueCents !== undefined) out.discountValueCents = parsed.discountValueCents;
-  if (item.link) out.deeplink = item.link;
+  // Prefer the real merchant URL — that's what monetizes and what an agent
+  // actually wants. Fall back to the Slickdeals thread when we can't find one.
+  const resolvedDeeplink = merchantUrl ?? item.link;
+  if (resolvedDeeplink) out.deeplink = resolvedDeeplink;
   if (pubDate) out.startsAt = pubDate;
   return out;
 }

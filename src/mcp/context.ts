@@ -1,5 +1,6 @@
 import type { Db } from '../db/client.ts';
 import type { KeepaClient } from '../sources/keepa.ts';
+import type { createAffiliateRewriter } from '../lib/affiliate.ts';
 
 /**
  * Per-request execution context for an MCP tool handler.
@@ -11,6 +12,10 @@ import type { KeepaClient } from '../sources/keepa.ts';
  * `keepa` is optional because `get_price_history` is the only tool that uses
  * it. When omitted, the tool falls back to its own default-constructed
  * client (which is a no-op when `KEEPA_API_KEY` is unset).
+ *
+ * `affiliate` is also optional — find_deals / get_deal use it to rewrite
+ * outbound merchant URLs through our affiliate tags. When omitted, the
+ * deeplink is passed through unchanged.
  */
 export interface McpContext {
   db: Db;
@@ -18,4 +23,5 @@ export interface McpContext {
   orgId?: string;
   scopes: string[];
   keepa?: KeepaClient;
+  affiliate?: ReturnType<typeof createAffiliateRewriter>;
 }
