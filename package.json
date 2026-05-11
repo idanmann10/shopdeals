@@ -44,7 +44,6 @@
     "pg": "^8.13.0",
     "pino": "^9.5.0",
     "stripe": "^17.4.0",
-    "voyageai": "^0.0.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {
