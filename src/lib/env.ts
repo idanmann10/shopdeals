@@ -32,6 +32,7 @@ const envSchema = z.object({
   // Affiliate / monetization tags. When set, find_deals / get_deal / find_products
   // rewrite outbound URLs through them. See src/lib/affiliate.ts.
   AMAZON_ASSOCIATES_TAG: z.string().optional(),
+  SKIMLINKS_PUBLISHER_ID: z.string().optional(),
 
   // CouponAPI.org — paid coupon catalog (free 7-day trial). When set, the
   // ingest cron pulls it. See src/sources/couponapi.ts.

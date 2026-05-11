@@ -65,6 +65,50 @@ describe('createAffiliateRewriter', () => {
     expect(r.url).toBe('javascript:alert(1)');
     expect(r.applied).toBeUndefined();
   });
+
+  it('wraps non-Amazon merchant URLs through Skimlinks when configured', () => {
+    const { rewrite } = createAffiliateRewriter({ skimlinksPublisherId: '123456' });
+    const r = rewrite('https://www.bestbuy.com/site/airpods/123');
+    expect(r.applied).toBe('skimlinks');
+    expect(r.url).toMatch(/^https:\/\/go\.skimresources\.com\/\?id=123456&url=/);
+    expect(decodeURIComponent(r.url.split('url=')[1] ?? '')).toBe(
+      'https://www.bestbuy.com/site/airpods/123',
+    );
+  });
+
+  it('prefers Amazon Associates over Skimlinks for amazon.com', () => {
+    const { rewrite } = createAffiliateRewriter({
+      amazonAssociatesTag: 'snapai-20',
+      skimlinksPublisherId: '123456',
+    });
+    const r = rewrite('https://www.amazon.com/dp/B0X');
+    expect(r.applied).toBe('amazon-associates');
+    expect(r.url).toContain('tag=snapai-20');
+    expect(r.url).not.toContain('skimresources');
+  });
+
+  it('does not Skimlinks-wrap community / social hosts', () => {
+    const { rewrite } = createAffiliateRewriter({ skimlinksPublisherId: '123456' });
+    for (const url of [
+      'https://slickdeals.net/f/12345',
+      'https://reddit.com/r/deals/comments/abc',
+      'https://www.youtube.com/watch?v=foo',
+      'https://x.com/someone/status/123',
+    ]) {
+      const r = rewrite(url);
+      expect(r.applied).not.toBe('skimlinks');
+      expect(r.url).toBe(url);
+    }
+  });
+
+  it('Skimlinks-wraps even when Amazon tag is set, for non-Amazon hosts', () => {
+    const { rewrite } = createAffiliateRewriter({
+      amazonAssociatesTag: 'snapai-20',
+      skimlinksPublisherId: '123456',
+    });
+    const r = rewrite('https://www.homedepot.com/p/ryobi/12345');
+    expect(r.applied).toBe('skimlinks');
+  });
 });
 
 describe('extractAmazonAsin', () => {

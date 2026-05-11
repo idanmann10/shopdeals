@@ -6,21 +6,27 @@
  * the commission to come back to us — not to whoever surfaced the deal
  * upstream.
  *
- * Today we only handle Amazon (free, instant signup via Amazon Associates).
- * The shape is set up so adding Skimlinks / Awin / Impact wrappers later
- * means one new function and one new env var per network — no changes
- * needed at the call sites.
+ * Two backends today:
+ *
+ *   1. Amazon Associates (free, instant signup) — appends a `tag=` param
+ *      to amazon.* URLs.
+ *   2. Skimlinks (universal monetization, free signup) — wraps ANY
+ *      non-Amazon merchant URL through `go.skimresources.com/?id=PUBID&url=...`,
+ *      which routes the click through whichever affiliate network Skimlinks
+ *      has the merchant in. One signup, thousands of merchants.
+ *
+ * Order: Amazon → Skimlinks → no-op. We do Amazon first because Associates
+ * pays more than Skimlinks' cut would on the same click, and because the
+ * Amazon path leaves the URL human-readable.
  *
  * Design notes:
  *   - URL parsing is permissive. We never throw on a malformed deeplink; we
- *     just return the input untouched. A broken affiliate wrap is worse
- *     than no wrap at all (we'd send the user to a 404).
- *   - If a deeplink already has an affiliate tag, we don't overwrite it.
- *     That preserves Slickdeals' existing affiliate when we use their
- *     thread URLs, and avoids stomping a creator-attributed link.
- *   - The env reads happen at construction time, not per-call, so flipping
- *     env vars at runtime requires a restart. That's intentional — we don't
- *     want a partial deploy emitting half-tagged links.
+ *     just return the input untouched.
+ *   - If a deeplink already has an affiliate tag on Amazon, we don't
+ *     overwrite it. That preserves creator-attributed links.
+ *   - We never wrap a slickdeals.net or other community-aggregator URL
+ *     through Skimlinks — those aren't merchant URLs.
+ *   - The env reads happen at construction time, not per-call.
  */
 
 import { env } from './env.ts';
@@ -28,22 +34,37 @@ import { env } from './env.ts';
 export interface AffiliateConfig {
   /** Amazon Associates tracking tag, e.g. `snapai-20`. */
   amazonAssociatesTag?: string;
+  /** Skimlinks publisher id (numeric, from your Skimlinks dashboard). */
+  skimlinksPublisherId?: string;
 }
 
 export interface RewriteResult {
   /** The URL the agent should hand to the user. */
   url: string;
   /** Which affiliate program (if any) was applied. */
-  applied?: 'amazon-associates' | 'noop';
+  applied?: 'amazon-associates' | 'skimlinks' | 'noop';
 }
 
 const AMAZON_HOST_RE = /(?:^|\.)amazon\.(com|co\.uk|de|fr|it|es|ca|com\.mx|co\.jp|in|com\.au|com\.br|cn)$/i;
 
 /**
- * Construct an affiliate rewriter from environment variables. Returns a
- * pre-bound `rewrite(url)` function. Callers should reuse a single instance
- * across requests; it's cheap to hold.
+ * Hosts we never want to wrap through Skimlinks — they're community pages
+ * or aggregators, not merchant checkouts.
  */
+const SKIMLINKS_EXCLUDE = new Set([
+  'slickdeals.net',
+  'slickdealscdn.com',
+  'reddit.com',
+  'old.reddit.com',
+  'r.reddit.com',
+  'twitter.com',
+  'x.com',
+  'youtube.com',
+  'youtu.be',
+  'facebook.com',
+  'instagram.com',
+]);
+
 export function createAffiliateRewriter(overrides: AffiliateConfig = {}): {
   rewrite: (url: string | undefined | null) => RewriteResult;
   config: AffiliateConfig;
@@ -56,8 +77,13 @@ export function createAffiliateRewriter(overrides: AffiliateConfig = {}): {
     }
   })();
 
-  const resolvedTag = overrides.amazonAssociatesTag ?? e?.['AMAZON_ASSOCIATES_TAG'];
-  const config: AffiliateConfig = resolvedTag ? { amazonAssociatesTag: resolvedTag } : {};
+  const amazonTag = overrides.amazonAssociatesTag ?? e?.['AMAZON_ASSOCIATES_TAG'];
+  const skimPub = overrides.skimlinksPublisherId ?? e?.['SKIMLINKS_PUBLISHER_ID'];
+
+  const config: AffiliateConfig = {
+    ...(amazonTag ? { amazonAssociatesTag: amazonTag } : {}),
+    ...(skimPub ? { skimlinksPublisherId: skimPub } : {}),
+  };
 
   const rewrite = (url: string | undefined | null): RewriteResult => {
     if (!url || typeof url !== 'string') return { url: url ?? '' };
@@ -71,25 +97,44 @@ export function createAffiliateRewriter(overrides: AffiliateConfig = {}): {
       return { url };
     }
 
-    // Only http(s) URLs are candidates for rewriting.
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return { url };
     }
 
     const host = parsed.hostname.toLowerCase();
 
+    // 1. Amazon Associates path.
     if (AMAZON_HOST_RE.test(host) && config.amazonAssociatesTag) {
-      // Don't stomp an existing tag — could be from an upstream creator's
-      // attribution that we want to preserve.
       if (parsed.searchParams.has('tag')) return { url, applied: 'noop' };
       parsed.searchParams.set('tag', config.amazonAssociatesTag);
       return { url: parsed.toString(), applied: 'amazon-associates' };
+    }
+
+    // 2. Skimlinks universal path. Wraps the URL through Skimlinks'
+    //    redirector, which routes via whichever network they have the
+    //    merchant in. Skip if the host is on our exclude list (community
+    //    pages, social) or if it's already an Amazon URL (handled above
+    //    or deliberately not wrapped because we have no tag).
+    if (config.skimlinksPublisherId && !AMAZON_HOST_RE.test(host) && !isExcludedHost(host)) {
+      const wrapped =
+        `https://go.skimresources.com/?id=${encodeURIComponent(config.skimlinksPublisherId)}` +
+        `&url=${encodeURIComponent(parsed.toString())}`;
+      return { url: wrapped, applied: 'skimlinks' };
     }
 
     return { url, applied: 'noop' };
   };
 
   return { rewrite, config };
+}
+
+function isExcludedHost(host: string): boolean {
+  if (SKIMLINKS_EXCLUDE.has(host)) return true;
+  // Match subdomains too: `*.slickdeals.net`.
+  for (const blocked of SKIMLINKS_EXCLUDE) {
+    if (host.endsWith(`.${blocked}`)) return true;
+  }
+  return false;
 }
 
 /**
