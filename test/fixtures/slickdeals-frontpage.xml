@@ -1,47 +1,54 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Slickdeals: Frontpage Deals</title>
+    <title>Slickdeals Frontpage RSS Feed</title>
     <link>https://slickdeals.net/</link>
-    <description>Hot deals voted to the front page</description>
+    <description>Community-curated deals</description>
     <item>
-      <title><![CDATA[[Best Buy] Sony WH-1000XM5 Wireless Headphones $279]]></title>
-      <link>https://slickdeals.net/f/12345-sony-wh-1000xm5-279</link>
-      <description><![CDATA[Sony's flagship noise-cancelling headphones, normally $399. Use this link &amp; <a href="https://bestbuy.com">add to cart</a>.]]></description>
-      <pubDate>Mon, 12 May 2026 14:00:00 GMT</pubDate>
-      <category>Electronics</category>
-      <guid isPermaLink="false">slickdeals-12345</guid>
+      <title><![CDATA[2-Pk 51.5-Oz Dawn Platinum Refill Jug Dish Liquid Soap $12.70 w/ S&S]]></title>
+      <link>https://slickdeals.net/f/11111-dawn?utm_source=rss</link>
+      <description><![CDATA[Amazon [amazon.com] has *2-Pack Dawn Platinum Refill Jug* on sale for $13.39 - 5% S&S = *$12.72*. Shipping is free w/ Prime.]]></description>
+      <content:encoded><![CDATA[<div><a href="https://slickdeals.net/click?lno=1" data-store-id="1" data-store-slug="amazon" data-product-exitWebsite="amazon.com">Amazon</a> has Dawn Platinum on sale for $12.72.</div>]]></content:encoded>
+      <pubDate>Mon, 11 May 26 21:14:52 +0000</pubDate>
+      <category>Frontpage Deals</category>
+      <dc:creator>PennyFound</dc:creator>
+      <guid>thread-11111</guid>
     </item>
     <item>
-      <title>Patagonia Better Sweater Jacket 30% off at REI</title>
-      <link>https://slickdeals.net/f/22222-patagonia-rei</link>
-      <description><![CDATA[Members get an extra 10% off. Save 30% on Patagonia outerwear at REI.]]></description>
-      <pubDate>Mon, 12 May 2026 12:30:00 GMT</pubDate>
-      <category>Apparel</category>
-      <guid isPermaLink="false">slickdeals-22222</guid>
+      <title><![CDATA[Ryobi ONE+ 18V String Trimmer w/ Battery $99]]></title>
+      <link>https://slickdeals.net/f/22222-ryobi</link>
+      <description>https://www.homedepot.com/p/RYOBI-trimmer/342282470 - also available in other configs.</description>
+      <content:encoded><![CDATA[<div><a href="https://slickdeals.net/click?lno=2" data-store-id="671" data-store-slug="the-home-depot" data-product-exitWebsite="homedepot.com">https://www.homedepot.com/p/RYOBI/342282470</a></div>]]></content:encoded>
+      <pubDate>Mon, 11 May 26 21:47:54 +0000</pubDate>
+      <category>Frontpage Deals</category>
+      <dc:creator>rm-rf</dc:creator>
+      <guid>thread-22222</guid>
     </item>
     <item>
-      <title><![CDATA[[Costco] Apple AirPods Pro (2nd Gen) $189]]></title>
-      <link>https://slickdeals.net/f/33333-airpods-pro</link>
-      <description><![CDATA[Costco membership required.]]></description>
-      <pubDate>Mon, 12 May 2026 11:00:00 GMT</pubDate>
-      <category>Electronics</category>
-      <guid>slickdeals-33333</guid>
+      <title><![CDATA[Patagonia Better Sweater Jacket 30% off]]></title>
+      <link>https://slickdeals.net/f/33333-patagonia</link>
+      <description><![CDATA[REI has Patagonia Better Sweater Jacket for 30% off. Members get an extra 10%.]]></description>
+      <content:encoded><![CDATA[<div>REI has Patagonia on sale.</div>]]></content:encoded>
+      <pubDate>Mon, 11 May 26 12:30:00 +0000</pubDate>
+      <category>Frontpage Deals</category>
+      <guid>thread-33333</guid>
     </item>
     <item>
-      <title>random deal nobody can attribute</title>
-      <link>https://slickdeals.net/f/44444</link>
-      <description>No merchant in the title, no bracket either.</description>
-      <pubDate>Mon, 12 May 2026 10:00:00 GMT</pubDate>
-      <guid>slickdeals-44444</guid>
+      <title><![CDATA[Niche watch from some obscure boutique that nobody can attribute]]></title>
+      <link>https://slickdeals.net/f/44444-watch</link>
+      <description><![CDATA[Cool watch deal.]]></description>
+      <content:encoded><![CDATA[<div>Cool watch deal with no merchant tagged.</div>]]></content:encoded>
+      <pubDate>Mon, 11 May 26 10:00:00 +0000</pubDate>
+      <guid>thread-44444</guid>
     </item>
     <item>
-      <title>Anker 30W USB-C Charger $14.99 from Amazon</title>
-      <link>https://slickdeals.net/f/55555-anker</link>
-      <description>Normally $25. Free shipping with Prime.</description>
-      <pubDate>Mon, 12 May 2026 09:00:00 GMT</pubDate>
-      <category>Electronics</category>
-      <guid>slickdeals-55555</guid>
+      <title><![CDATA[Sony WH-1000XM5 Headphones $279]]></title>
+      <link>https://slickdeals.net/f/55555-sony</link>
+      <description><![CDATA[Normally $399. Pick yours up for $279.]]></description>
+      <content:encoded><![CDATA[<div>Sony WH-1000XM5 deal at https://www.bestbuy.com/site/sony-headphones/12345 for $279.</div>]]></content:encoded>
+      <pubDate>Mon, 11 May 26 09:00:00 +0000</pubDate>
+      <category>Frontpage Deals</category>
+      <guid>thread-55555</guid>
     </item>
   </channel>
 </rss>

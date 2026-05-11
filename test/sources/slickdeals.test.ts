@@ -1,7 +1,11 @@
 /**
- * Slickdeals adapter tests. We mock `fetch` against a small XML fixture that
- * exercises every title-shape the heuristic merchant extractor cares about,
- * plus one "no merchant" row to confirm we drop it cleanly.
+ * Slickdeals adapter tests. The fixture is built to mirror real Slickdeals
+ * RSS shape: titles are product names (not "[Merchant] ..."), and the
+ * merchant lives in `content:encoded` data-attributes (data-store-slug /
+ * data-product-exitWebsite). Several fallback signal paths are also
+ * exercised: a `Merchant has ...` description prefix, a `merchant.com`
+ * URL in description text, and one row that has none of these (gets
+ * dropped on purpose).
  */
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +13,7 @@ import { dirname, resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   SlickdealsAdapter,
-  extractMerchantFromTitle,
+  extractMerchant,
   mapSlickdealsItem,
   parseRssItems,
 } from '../../src/sources/slickdeals.ts';
@@ -53,7 +57,7 @@ describe('SlickdealsAdapter', () => {
     expect(calls[0]!.url).toContain('slickdeals.net');
   });
 
-  it('parses + maps real-shaped items, dropping ones without a merchant', async () => {
+  it('extracts merchant from data-store-slug, description, and URL signals', async () => {
     const xml = await loadFixture();
     const { impl } = makeFetch(xml);
     const adapter = new SlickdealsAdapter({ fetchImpl: impl });
@@ -61,38 +65,37 @@ describe('SlickdealsAdapter', () => {
     const out: RawDealInput[] = [];
     for await (const item of adapter.fetch()) out.push(item);
 
-    // 5 items in the fixture; 1 has no extractable merchant -> 4 yielded.
+    // 5 items in the fixture; 1 has no merchant signal -> 4 yielded.
     expect(out).toHaveLength(4);
     for (const d of out) {
       expect(d.sourceNetwork).toBe('slickdeals');
       expect(d.kind).toBe('sale');
       expect(d.attributionSource).toBe('slickdeals');
       expect(d.deeplink).toMatch(/slickdeals\.net\/f\//);
-      // Coupon code field must never be set — Slickdeals isn't a code feed.
+      // Slickdeals isn't a code feed.
       expect(d.code).toBeUndefined();
     }
 
-    const bestBuy = out.find((d) => d.sourceId === 'slickdeals-12345');
-    expect(bestBuy?.merchant.displayName).toBe('Best Buy');
-    expect(bestBuy?.merchant.slug).toBe('best-buy');
-    expect(bestBuy?.title).toMatch(/Sony WH-1000XM5/);
-    // Description has HTML stripped + entities decoded.
-    expect(bestBuy?.description).toContain('add to cart');
-    expect(bestBuy?.description).not.toContain('<a href');
-    expect(bestBuy?.description).toContain('&'); // &amp; -> &
+    // 1. data-store-slug "amazon" -> "Amazon"
+    const dawn = out.find((d) => d.sourceId === 'thread-11111');
+    expect(dawn?.merchant.slug).toBe('amazon');
+    expect(dawn?.merchant.displayName).toBe('Amazon');
 
-    const rei = out.find((d) => d.sourceId === 'slickdeals-22222');
-    expect(rei?.merchant.displayName).toBe('REI');
-    expect(rei?.discountType).toBe('pct_off');
-    expect(rei?.discountValueBps).toBe(3000); // 30%
+    // 2. data-store-slug "the-home-depot" -> "The Home Depot"
+    const ryobi = out.find((d) => d.sourceId === 'thread-22222');
+    expect(ryobi?.merchant.slug).toBe('the-home-depot');
+    expect(ryobi?.merchant.displayName).toBe('The Home Depot');
 
-    const costco = out.find((d) => d.sourceId === 'slickdeals-33333');
-    expect(costco?.merchant.displayName).toBe('Costco');
+    // 3. Fallback: "REI has Patagonia..." text pattern -> "REI"
+    const patagonia = out.find((d) => d.sourceId === 'thread-33333');
+    expect(patagonia?.merchant.displayName).toBe('REI');
+    expect(patagonia?.discountType).toBe('pct_off');
+    expect(patagonia?.discountValueBps).toBe(3000);
 
-    const amazon = out.find((d) => d.sourceId === 'slickdeals-55555');
-    expect(amazon?.merchant.displayName).toBe('Amazon');
-    // The "$14.99 from Amazon" pattern must trim Amazon out of the cleaned title.
-    expect(amazon?.title).not.toMatch(/Amazon$/);
+    // 4. Fallback: URL hostname in content:encoded -> bestbuy
+    const sony = out.find((d) => d.sourceId === 'thread-55555');
+    expect(sony?.merchant.slug).toBe('bestbuy');
+    expect(sony?.merchant.displayName).toBe('Best Buy');
   });
 
   it('logs and returns nothing when the feed errors', async () => {
@@ -114,15 +117,19 @@ describe('SlickdealsAdapter', () => {
 });
 
 describe('parseRssItems', () => {
-  it('extracts every item even when fields are out of order', () => {
-    const xml = `<?xml version="1.0"?><rss><channel>
-      <item><title>A</title><link>https://x/1</link><guid>1</guid></item>
-      <item><guid>2</guid><title>B</title><link>https://x/2</link></item>
+  it('extracts every item including content:encoded fields', () => {
+    const xml = `<?xml version="1.0"?><rss xmlns:content="x"><channel>
+      <item>
+        <title>A</title>
+        <link>https://x/1</link>
+        <content:encoded>html-body</content:encoded>
+        <guid>1</guid>
+      </item>
     </channel></rss>`;
     const items = parseRssItems(xml);
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(1);
     expect(items[0]!.title).toBe('A');
-    expect(items[1]!.title).toBe('B');
+    expect(items[0]!.contentEncoded).toBe('html-body');
   });
 
   it('returns an empty array on garbage input', () => {
@@ -130,34 +137,52 @@ describe('parseRssItems', () => {
   });
 });
 
-describe('extractMerchantFromTitle', () => {
-  it('handles bracket-prefix titles', () => {
-    expect(extractMerchantFromTitle('[Best Buy] Sony headphones $279')).toEqual({
-      merchant: 'Best Buy',
-      cleanTitle: 'Sony headphones $279',
+describe('extractMerchant', () => {
+  it('prefers data-store-slug over description text', () => {
+    const m = extractMerchant({
+      contentEncoded: '<a data-store-slug="amazon" data-product-exitWebsite="amazon.com">x</a>',
+      description: 'Walmart has the same thing.',
     });
+    expect(m).toEqual({ slug: 'amazon', displayName: 'Amazon' });
   });
 
-  it('handles "at Merchant" suffix titles', () => {
-    expect(extractMerchantFromTitle('Patagonia jacket 30% off at REI')).toEqual({
-      merchant: 'REI',
-      cleanTitle: 'Patagonia jacket 30% off',
+  it('falls back to data-product-exitWebsite when slug is missing', () => {
+    const m = extractMerchant({
+      contentEncoded: '<a data-product-exitWebsite="walmart.com">x</a>',
     });
+    expect(m?.slug).toBe('walmart');
+    expect(m?.displayName).toBe('Walmart');
   });
 
-  it('handles "from Merchant" with .com suffix', () => {
-    expect(extractMerchantFromTitle('Charger $14.99 from Amazon.com')).toEqual({
-      merchant: 'Amazon',
-      cleanTitle: 'Charger $14.99',
+  it('falls back to "Merchant has ..." patterns in plaintext description', () => {
+    const m = extractMerchant({ description: 'REI has these Patagonia sweaters cheap.' });
+    expect(m).toEqual({ slug: 'rei', displayName: 'REI' });
+  });
+
+  it('handles "*Merchant* [merchant.com]" markdown patterns', () => {
+    const m = extractMerchant({
+      description: '*Costco* [costco.com] has AirPods Pro for $189.',
     });
+    expect(m?.displayName).toBe('Costco');
   });
 
-  it('returns null when no merchant pattern matches', () => {
-    expect(extractMerchantFromTitle('A vague deal with no merchant')).toBeNull();
+  it('falls back to URL hostname when no other signal is present', () => {
+    const m = extractMerchant({
+      description: 'Deal at https://www.newegg.com/p/12345 for $99.',
+    });
+    expect(m?.slug).toBe('newegg');
   });
 
-  it('rejects bracket prefixes that are too short to be a real merchant', () => {
-    expect(extractMerchantFromTitle('[a] short')).toBeNull();
+  it('returns null when nothing recognizable is present', () => {
+    expect(extractMerchant({ description: 'Some random sentence with no signals.' })).toBeNull();
+    expect(extractMerchant({})).toBeNull();
+  });
+
+  it('ignores a slickdeals.net hostname as a merchant fallback', () => {
+    const m = extractMerchant({
+      description: 'Visit https://slickdeals.net/forum/12345 for details.',
+    });
+    expect(m).toBeNull();
   });
 });
 
@@ -170,7 +195,7 @@ describe('mapSlickdealsItem', () => {
   it('returns null when no merchant can be inferred', () => {
     expect(
       mapSlickdealsItem({
-        title: 'Some deal nobody attributed',
+        title: 'A perfectly long product name with no merchant signal',
         link: 'https://slickdeals.net/f/x',
         guid: 'x',
       }),
@@ -180,7 +205,8 @@ describe('mapSlickdealsItem', () => {
   it('returns null when both guid and link are missing', () => {
     expect(
       mapSlickdealsItem({
-        title: '[Costco] Apple AirPods $189',
+        title: 'Long enough product title to pass the length guard',
+        contentEncoded: '<a data-store-slug="amazon">x</a>',
       }),
     ).toBeNull();
   });
