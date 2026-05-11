@@ -217,6 +217,20 @@ export const ingestRuns = pgTable(
   })
 );
 
+export const waitlist = pgTable(
+  'waitlist',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: varchar('email', { length: 320 }).notNull(),
+    source: varchar('source', { length: 64 }),
+    referrer: text('referrer'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    emailUnique: uniqueIndex('waitlist_email_unique').on(t.email),
+  })
+);
+
 // ---------- Types ----------
 
 export type Merchant = typeof merchants.$inferSelect;
@@ -231,6 +245,8 @@ export type ApiUsage = typeof apiUsage.$inferSelect;
 export type NewApiUsage = typeof apiUsage.$inferInsert;
 export type IngestRun = typeof ingestRuns.$inferSelect;
 export type NewIngestRun = typeof ingestRuns.$inferInsert;
+export type WaitlistEntry = typeof waitlist.$inferSelect;
+export type NewWaitlistEntry = typeof waitlist.$inferInsert;
 
 // Composite primary key not used; left here for future dedup_pairs etc.
 export const _exports = { primaryKey };
