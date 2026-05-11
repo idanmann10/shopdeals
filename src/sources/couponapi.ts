@@ -1,25 +1,34 @@
 /**
  * CouponAPI.org adapter.
  *
- * Source: paid feed (free 7-day trial, $49/mo basic) at couponapi.org. Covers
- * 362k coupons across 15k stores and 82 affiliate networks — the broadest
- * single-API coupon catalog we've found in this price range.
+ * Source: paid coupon feed (free 7-day trial, $49/mo basic). 362k coupons,
+ * 15k stores, 82 affiliate networks. Docs:
+ * https://couponapi.org/help/knowledgebase.php?article=59
  *
- * The CouponAPI docs are behind their auth wall so the schema below is
- * inferred from the field list they advertise publicly:
+ * Endpoint: GET https://couponapi.org/api/getIncrementalFeed/
  *
- *     id, title, description, coupon_code, affiliate_link, store,
- *     store_id, store_url, store_image, categories, start_date,
- *     end_date, status, country, deeplink_source, cashback_link
+ * Auth: API_KEY query param.
  *
- * We use `passthrough()` everywhere so an unexpected extra field never
- * blocks an ingest. Field-name remapping (e.g. their docs say `coupon_code`
- * vs. `code`) can be done by overriding the response schema in tests
- * without changing the adapter shape.
+ * Watermarking is server-side: the API tracks per-key extraction state and
+ * each call returns only offers that have changed since the last successful
+ * call (new / updated / suspended). We don't manage our own cursor.
  *
- * Auth: API key is passed as `API_KEY` query param per their convention.
- * The "incremental" feed type returns only changes since the last sync,
- * which is what we want for cron — full feed is too heavy at 362k rows.
+ * Sample response shape:
+ *   {
+ *     "result": true,
+ *     "offers": [
+ *       { "offer_id": 12345, "title": "...", "status": "new",
+ *         "code": "SAVE20", "store": "Acme", "end_date": "2024-12-31",
+ *         "affiliate_link": "https://...", ... },
+ *       ...
+ *     ]
+ *   }
+ *
+ * Suspended offers are still returned but with `status='suspended'`. We
+ * yield them through the adapter so the lifecycle sweep's source-network
+ * staleness pass can deactivate them on the next tick. (Alternatively we
+ * could filter them here and rely entirely on the sweep — but downstream
+ * we want to know they were actively dropped vs. just absent.)
  */
 import { z } from 'zod';
 import { env } from '../lib/env.ts';
@@ -32,32 +41,35 @@ import {
   type SourceAdapter,
 } from './common.ts';
 
-const DEFAULT_BASE_URL = 'https://couponapi.org/api/v2';
+const DEFAULT_BASE_URL = 'https://couponapi.org/api/getIncrementalFeed/';
 
 const CouponSchema = z
   .object({
-    id: z.union([z.string(), z.number()]),
+    // CouponAPI uses `offer_id`; we also accept `id` for forward-compat.
+    offer_id: z.union([z.string(), z.number()]).nullish(),
+    id: z.union([z.string(), z.number()]).nullish(),
     title: z.string().nullish(),
     description: z.string().nullish(),
-    // CouponAPI uses both `coupon_code` and `code` in different docs;
-    // accept either.
-    coupon_code: z.string().nullish(),
     code: z.string().nullish(),
-    // Affiliate link already carries our publisher id when the feed is
-    // pulled with our key — no client-side rewriting needed.
+    coupon_code: z.string().nullish(),
     affiliate_link: z.string().nullish(),
-    deeplink_source: z.string().nullish(),
+    smartLink: z.string().nullish(),
+    url: z.string().nullish(),
     store: z.string().nullish(),
     store_id: z.union([z.string(), z.number()]).nullish(),
     store_url: z.string().nullish(),
     store_image: z.string().nullish(),
+    image: z.string().nullish(),
+    image_url: z.string().nullish(),
     categories: z.union([z.string(), z.array(z.string())]).nullish(),
+    category_name: z.string().nullish(),
     start_date: z.string().nullish(),
     end_date: z.string().nullish(),
-    // Status can be "active" / "inactive" / "deleted" depending on feed type.
+    /** "new" | "updated" | "suspended" | "active" — varies by feed mode. */
     status: z.string().nullish(),
     country: z.union([z.string(), z.array(z.string())]).nullish(),
     cashback_link: z.string().nullish(),
+    deeplink_source: z.string().nullish(),
   })
   .passthrough();
 
@@ -66,46 +78,49 @@ export type CouponApiCoupon = z.infer<typeof CouponSchema>;
 const ResponseSchema = z
   .object({
     result: z.union([z.boolean(), z.string()]).optional(),
-    // Most common envelope: `{ result: true, offers: [...] }`. Some endpoints
-    // return `{ data: [...] }`. Accept both.
     offers: z.array(CouponSchema).optional(),
+    // Some endpoints return `data: [...]` instead of `offers: [...]`. Accept both.
     data: z.array(CouponSchema).optional(),
-    // Pagination cursors when present.
-    next_offset: z.union([z.number(), z.string()]).nullish(),
-    has_more: z.boolean().nullish(),
+    // CouponAPI returns the new server-side watermark in some responses.
+    last_extract: z.union([z.number(), z.string()]).nullish(),
+    error: z.string().nullish(),
   })
   .passthrough();
 
 export interface CouponApiAdapterOptions {
   apiKey?: string;
-  baseUrl?: string;
+  /** Full URL including path (e.g. `https://couponapi.org/api/getIncrementalFeed/`). */
+  endpoint?: string;
   fetchImpl?: typeof fetch;
-  /** Page size. CouponAPI caps at 1000. */
-  pageSize?: number;
-  /** Safety cap on pagination. */
-  maxPages?: number;
+  /**
+   * Unix timestamp (seconds). When supplied, passed as `last_extract`. Skip
+   * to let the server use its own watermark.
+   */
+  lastExtract?: number;
+  /**
+   * When true, passes `off_record=1` so the server-side watermark is not
+   * advanced. Use in dev / one-off pulls. Production cron should set
+   * `false` (the default) so the next run only returns deltas.
+   */
+  offRecord?: boolean;
   /** Optional country filter, e.g. 'US'. */
   country?: string;
-  /** `incremental` (recommended) or `full`. */
-  feedType?: 'incremental' | 'full';
   timeoutMs?: number;
 }
 
 export class CouponApiAdapter implements SourceAdapter {
+  /**
+   * We re-use the `manual` enum value (no migration cost). The downstream
+   * `attributionSource='couponapi'` field still lets us filter by source.
+   */
   readonly network = 'manual' as const;
-  // ^^ We re-use the existing `manual` enum value rather than minting a new
-  // `couponapi` enum — keeps the migration cost zero. The actual
-  // `attributionSource` field is set to `couponapi` so downstream filtering
-  // by *source* still works. If we ever want a dedicated enum value, that's
-  // a one-line schema bump + migration.
 
   private readonly apiKey: string;
-  private readonly baseUrl: string;
+  private readonly endpoint: string;
   private readonly fetchImpl: typeof fetch;
-  private readonly pageSize: number;
-  private readonly maxPages: number;
+  private readonly lastExtract: number | undefined;
+  private readonly offRecord: boolean;
   private readonly country: string | undefined;
-  private readonly feedType: 'incremental' | 'full';
   private readonly timeoutMs: number;
 
   constructor(opts: CouponApiAdapterOptions = {}) {
@@ -117,13 +132,12 @@ export class CouponApiAdapter implements SourceAdapter {
       }
     })();
     this.apiKey = opts.apiKey ?? e?.['COUPONAPI_KEY'] ?? '';
-    this.baseUrl = (opts.baseUrl ?? e?.['COUPONAPI_BASE_URL'] ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
+    this.endpoint = opts.endpoint ?? e?.['COUPONAPI_BASE_URL'] ?? DEFAULT_BASE_URL;
     this.fetchImpl = opts.fetchImpl ?? fetch;
-    this.pageSize = Math.max(1, Math.min(1000, opts.pageSize ?? 500));
-    this.maxPages = Math.max(1, opts.maxPages ?? 50);
+    this.lastExtract = opts.lastExtract;
+    this.offRecord = opts.offRecord ?? false;
     this.country = opts.country ?? e?.['COUPONAPI_COUNTRY'] ?? undefined;
-    this.feedType = opts.feedType ?? 'incremental';
-    this.timeoutMs = opts.timeoutMs ?? 30_000;
+    this.timeoutMs = opts.timeoutMs ?? 60_000;
   }
 
   isConfigured(): boolean {
@@ -133,49 +147,57 @@ export class CouponApiAdapter implements SourceAdapter {
   async *fetch(): AsyncIterable<RawDealInput> {
     if (!this.isConfigured()) return;
 
-    let offset = 0;
-    for (let page = 0; page < this.maxPages; page += 1) {
-      const params = new URLSearchParams({
-        API_KEY: this.apiKey,
-        format: 'json',
-        type: this.feedType,
-        limit: String(this.pageSize),
-        offset: String(offset),
-      });
-      if (this.country) params.set('country', this.country);
-      const url = `${this.baseUrl}/feed?${params.toString()}`;
+    const params = new URLSearchParams({
+      API_KEY: this.apiKey,
+      format: 'json',
+    });
+    if (this.lastExtract !== undefined) params.set('last_extract', String(this.lastExtract));
+    if (this.offRecord) params.set('off_record', '1');
+    if (this.country) params.set('country', this.country);
 
-      let parsed: z.infer<typeof ResponseSchema>;
-      try {
-        parsed = await fetchPage(url, this.fetchImpl, this.timeoutMs);
-      } catch (err) {
-        log.error(
-          { err: err instanceof Error ? err.message : String(err), page },
-          'couponapi: page fetch failed, stopping',
-        );
-        return;
-      }
+    const url = `${this.endpoint}${this.endpoint.includes('?') ? '&' : '?'}${params.toString()}`;
 
-      const coupons = parsed.offers ?? parsed.data ?? [];
-      if (coupons.length === 0) return;
-
-      for (const c of coupons) {
-        const mapped = mapCoupon(c);
-        if (mapped) yield mapped;
-      }
-
-      // Stop conditions: explicit `has_more` flag, server-supplied next
-      // offset, or a short page.
-      if (parsed.has_more === false) return;
-      if (coupons.length < this.pageSize) return;
-      offset = typeof parsed.next_offset === 'number'
-        ? parsed.next_offset
-        : offset + this.pageSize;
+    let parsed: z.infer<typeof ResponseSchema>;
+    try {
+      parsed = await fetchFeed(url, this.fetchImpl, this.timeoutMs);
+    } catch (err) {
+      log.error(
+        { err: err instanceof Error ? err.message : String(err) },
+        'couponapi: feed fetch failed',
+      );
+      return;
     }
+
+    if (parsed.error) {
+      log.error({ error: parsed.error }, 'couponapi: server returned error');
+      return;
+    }
+
+    const coupons = parsed.offers ?? parsed.data ?? [];
+    if (coupons.length === 0) {
+      log.info('couponapi: empty incremental delta');
+      return;
+    }
+
+    let yielded = 0;
+    let suspended = 0;
+    for (const c of coupons) {
+      const mapped = mapCoupon(c);
+      if (mapped === null) {
+        if ((c.status ?? '').toLowerCase() === 'suspended') suspended += 1;
+        continue;
+      }
+      yielded += 1;
+      yield mapped;
+    }
+    log.info(
+      { yielded, suspended, total: coupons.length },
+      'couponapi: incremental delta processed',
+    );
   }
 }
 
-async function fetchPage(
+async function fetchFeed(
   url: string,
   fetchImpl: typeof fetch,
   timeoutMs: number,
@@ -189,7 +211,7 @@ async function fetchPage(
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status} for ${url}${body ? `: ${body.slice(0, 200)}` : ''}`);
+      throw new Error(`HTTP ${res.status} ${res.statusText}${body ? `: ${body.slice(0, 200)}` : ''}`);
     }
     const json = (await res.json()) as unknown;
     return ResponseSchema.parse(json);
@@ -200,40 +222,41 @@ async function fetchPage(
 
 /**
  * Map a CouponAPI offer to our canonical `RawDealInput`. Returns null when
- * the coupon is missing the minimum we need (an id, a merchant name, and
- * a title).
+ * the offer is missing the minimum we need or is marked suspended.
  */
 export function mapCoupon(c: CouponApiCoupon): RawDealInput | null {
-  const sourceId = String(c.id ?? '').trim();
-  if (!sourceId) return null;
+  const offerId = String(c.offer_id ?? c.id ?? '').trim();
+  if (!offerId) return null;
 
   const storeName = (c.store ?? '').trim();
   if (!storeName) return null;
 
-  const code = (c.coupon_code ?? c.code ?? '').trim();
-  const titleRaw = (c.title ?? c.description ?? '').trim();
-  const title = titleRaw || `${storeName} offer`;
-
-  // Active by default; some incremental feeds tag deletions via status.
   const status = (c.status ?? '').toLowerCase();
-  if (status === 'deleted' || status === 'inactive' || status === 'expired') {
+  if (status === 'suspended' || status === 'expired' || status === 'inactive' || status === 'deleted') {
     return null;
   }
 
+  const code = (c.code ?? c.coupon_code ?? '').trim();
+  const titleRaw = (c.title ?? c.description ?? '').trim();
+  const title = titleRaw || `${storeName} offer`;
+
   const parsed = parseDiscountFromText(`${title} ${c.description ?? ''}`);
 
-  const categories = normalizeCategories(c.categories);
+  const categories = normalizeCategories(c.categories ?? c.category_name);
   const countries = normalizeCountries(c.country);
   const domain = extractHost(c.store_url ?? '');
 
-  const sourceMeta: Record<string, unknown> = { raw: { id: c.id, store_id: c.store_id } };
+  const sourceMeta: Record<string, unknown> = {
+    raw: { offer_id: c.offer_id ?? c.id, store_id: c.store_id },
+  };
   if (c.deeplink_source) sourceMeta['deeplinkSource'] = c.deeplink_source;
   if (c.cashback_link) sourceMeta['cashbackLink'] = c.cashback_link;
-  if (c.store_image) sourceMeta['storeImage'] = c.store_image;
+  const storeImage = c.store_image ?? c.image ?? c.image_url;
+  if (storeImage) sourceMeta['storeImage'] = storeImage;
 
   const out: RawDealInput = {
     sourceNetwork: 'manual',
-    sourceId: `couponapi:${sourceId}`,
+    sourceId: `couponapi:${offerId}`,
     merchant: {
       slug: slugify(storeName),
       displayName: storeName,
@@ -257,7 +280,8 @@ export function mapCoupon(c: CouponApiCoupon): RawDealInput | null {
   if (startsAt) out.startsAt = startsAt;
   const expiresAt = toDate(c.end_date);
   if (expiresAt) out.expiresAt = expiresAt;
-  if (c.affiliate_link) out.deeplink = c.affiliate_link;
+  const deeplink = c.affiliate_link ?? c.smartLink ?? c.url;
+  if (deeplink) out.deeplink = deeplink;
   return out;
 }
 
