@@ -22,6 +22,7 @@ import { landingHtml } from './landing/page.ts';
 import { loadLandingStats } from './landing/stats.ts';
 import { registerWaitlistRoute } from './landing/waitlist.ts';
 import { createAffiliateRewriter } from './lib/affiliate.ts';
+import { SerpApiClient } from './lib/serpapi.ts';
 import type { AuthPrincipal } from './auth/types.ts';
 
 export interface BuildAppOptions {
@@ -89,6 +90,7 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
 // don't want a partial deploy emitting half-tagged links.
 const keepaClient = new KeepaClient();
 const affiliateRewriter = createAffiliateRewriter();
+const serpApiClient = new SerpApiClient();
 
 async function deriveMcpContext(c: Context): Promise<McpContext> {
   const principal = c.get('principal') as AuthPrincipal | undefined;
@@ -99,6 +101,7 @@ async function deriveMcpContext(c: Context): Promise<McpContext> {
     scopes: principal?.scopes ?? ['deals:read'],
     keepa: keepaClient,
     affiliate: affiliateRewriter,
+    serpapi: serpApiClient,
   };
 }
 

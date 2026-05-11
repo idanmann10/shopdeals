@@ -1,339 +1,419 @@
 /**
- * Server-rendered landing page. Single HTML string returned from `GET /` —
- * no SPA, no build step.
+ * Server-rendered landing page. Single HTML string returned from `GET /`.
+ * No SPA, no build step, no external image assets beyond Google Fonts.
  *
- * The page accepts a `LandingData` shape so the server can stamp in live
- * numbers (deals indexed, merchants covered) at render time. Falling back
- * to plausible defaults when the caller doesn't pass them keeps the
- * function safe to call from tests that don't touch the DB.
+ * The hero leads with a chat-style mockup of "ask AI → get a deal card",
+ * deliberately B2C in voice. Live counts (deals/merchants/freshness) come
+ * from `loadLandingStats` so the page always looks alive even with a
+ * single-digit catalog.
  */
 
 export interface LandingData {
-  /** Total active deals indexed right now. */
   dealCount?: number;
-  /** Total merchants with at least one active deal. */
   merchantCount?: number;
-  /** Hours since the most recent ingest_runs row finished successfully. */
   lastIngestHoursAgo?: number;
 }
 
 export function landingHtml(data: LandingData = {}): string {
-  const dealCount = formatThousands(data.dealCount ?? 0);
-  const merchantCount = formatThousands(data.merchantCount ?? 0);
+  const dealCount = formatThousands(data.dealCount);
+  const merchantCount = formatThousands(data.merchantCount);
   const ingestStatus = formatIngestStatus(data.lastIngestHoursAgo);
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Snap-AI — Tell Claude to find you the deal.</title>
-<meta name="description" content="An MCP server that gives Claude, ChatGPT, and Cursor working coupon codes and merchant-verified deals. Free." />
-<meta property="og:title" content="Snap-AI — Tell Claude to find you the deal" />
-<meta property="og:description" content="MCP server for Claude, ChatGPT, and Cursor. Working codes, real deal links, free." />
+<title>Snap-AI — Find good deals online with your AI</title>
+<meta name="description" content="Tell Claude, ChatGPT, or Cursor what you want. Snap-AI hands them working coupon codes and live prices so you save money without thinking about it." />
+<meta property="og:title" content="Snap-AI — Find good deals online with your AI" />
+<meta property="og:description" content="Tell Claude, ChatGPT, or Cursor what you want. Snap-AI hands them working codes and live prices." />
 <meta property="og:type" content="website" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" />
 <style>
   :root {
-    --bg: #faf8f4;
+    --bg: #fbfafe;
     --bg-card: #ffffff;
-    --bg-soft: #f1ede5;
-    --ink: #14130f;
-    --ink-2: #4a463e;
-    --ink-3: #8b8579;
-    --line: #e3ddd0;
-    --accent: #c8503a;
-    --code-bg: #14130f;
-    --code-ink: #faf8f4;
-    --radius: 10px;
+    --bg-soft: #f3f1fa;
+    --ink: #110f1f;
+    --ink-2: #4a4860;
+    --ink-3: #8e8aa8;
+    --line: #e7e4f0;
+    --line-soft: #f0edf7;
+    --brand: #5a4fcf;
+    --brand-2: #7c70e8;
+    --brand-soft: #ece9fb;
+    --warm: #ff7a59;
+    --green: #2f9e6b;
+    --green-soft: #e3f5ec;
+    --radius: 14px;
   }
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     font-size: 16px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; transition: text-decoration-color .12s; }
-  a:hover { text-decoration-color: var(--accent); }
-  ::selection { background: var(--ink); color: var(--bg); }
+  a { color: var(--brand); text-decoration: none; }
+  a:hover { color: var(--ink); }
+  ::selection { background: var(--brand); color: var(--bg); }
 
-  .container { max-width: 1040px; margin: 0 auto; padding: 0 28px; }
-  .container-narrow { max-width: 720px; margin: 0 auto; padding: 0 28px; }
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+  .container-narrow { max-width: 760px; margin: 0 auto; padding: 0 28px; }
 
   /* Top bar */
-  header {
-    padding: 24px 0;
-  }
-  header .row {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 24px;
-  }
+  header { padding: 22px 0; }
+  header .row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
   .logo {
-    font-family: 'Newsreader', serif;
-    font-size: 22px;
-    font-style: italic;
-    letter-spacing: -0.01em;
-    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
     color: var(--ink);
   }
-  .nav { display: flex; gap: 22px; font-size: 14px; align-items: baseline; }
-  .nav a { color: var(--ink-2); text-decoration: none; }
+  .logo-mark {
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+    display: inline-grid; place-items: center;
+    color: white; font-weight: 800; font-size: 14px;
+    box-shadow: 0 2px 8px rgba(90,79,207,0.25);
+  }
+  .nav { display: flex; gap: 22px; font-size: 14px; align-items: center; }
+  .nav a { color: var(--ink-2); }
   .nav a:hover { color: var(--ink); }
-  .live-pill {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 12px; color: var(--ink-3);
-    padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px;
-    background: var(--bg-card);
+  .nav-cta {
+    padding: 8px 14px;
+    background: var(--ink); color: var(--bg-card);
+    border-radius: 999px; font-weight: 500;
   }
-  .live-pill .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: #5b9d6f;
-    box-shadow: 0 0 0 0 rgba(91,157,111,0.5);
-    animation: dot-pulse 2.4s ease-out infinite;
-  }
-  @keyframes dot-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(91,157,111,0.5); }
-    100% { box-shadow: 0 0 0 8px rgba(91,157,111,0); }
-  }
+  .nav-cta:hover { background: var(--brand); color: var(--bg-card); }
 
   /* Hero */
-  .hero { padding: 56px 0 72px; }
+  .hero {
+    padding: 56px 0 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -180px; left: 50%; transform: translateX(-50%);
+    width: 1000px; height: 700px;
+    background: radial-gradient(ellipse at center, rgba(90,79,207,0.10) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero-inner { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  @media (max-width: 880px) { .hero-inner { grid-template-columns: 1fr; gap: 40px; } }
+
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    background: var(--brand-soft); color: var(--brand);
+    border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    margin-bottom: 22px;
+    letter-spacing: 0.01em;
+  }
   h1.hero-title {
-    font-family: 'Newsreader', serif;
-    font-weight: 400;
-    font-size: clamp(40px, 6.5vw, 72px);
+    font-weight: 800;
+    font-size: clamp(40px, 5.5vw, 60px);
     line-height: 1.04;
-    letter-spacing: -0.025em;
-    margin: 0 0 24px;
+    letter-spacing: -0.035em;
+    margin: 0 0 20px;
     color: var(--ink);
   }
-  h1.hero-title .italic { font-style: italic; }
+  h1.hero-title em { font-style: normal; color: var(--brand); }
   .hero-sub {
-    font-size: clamp(17px, 1.5vw, 19px);
+    font-size: clamp(17px, 1.4vw, 19px);
     color: var(--ink-2);
-    max-width: 540px;
-    margin: 0 0 36px;
-    line-height: 1.5;
+    max-width: 520px;
+    margin: 0 0 28px;
+    line-height: 1.55;
   }
   .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
-    font-family: inherit; font-size: 14px; font-weight: 500;
-    padding: 11px 18px; border-radius: 8px;
-    border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
+    font-family: inherit; font-size: 14.5px; font-weight: 600;
+    padding: 12px 20px; border-radius: 999px;
+    border: 1px solid var(--ink); background: var(--ink); color: var(--bg-card);
     cursor: pointer;
     text-decoration: none;
-    transition: transform .1s ease, background .1s ease;
+    transition: transform .12s ease, background .12s ease, box-shadow .12s;
+    box-shadow: 0 1px 0 rgba(17,15,31,0.05), 0 4px 14px rgba(17,15,31,0.08);
   }
-  .btn:hover { background: var(--accent); border-color: var(--accent); text-decoration: none; }
-  .btn-ghost {
-    background: transparent; color: var(--ink); border: 1px solid var(--line);
-  }
-  .btn-ghost:hover { background: var(--bg-card); border-color: var(--ink); color: var(--ink); }
-  .btn svg { width: 14px; height: 14px; }
+  .btn:hover { background: var(--brand); border-color: var(--brand); color: white; transform: translateY(-1px); }
+  .btn-ghost { background: var(--bg-card); color: var(--ink); border-color: var(--line); box-shadow: none; }
+  .btn-ghost:hover { background: var(--bg-soft); color: var(--ink); border-color: var(--ink); }
 
-  /* Demo block — a fake terminal showing what calling snap-ai feels like */
-  .demo {
-    margin: 48px 0 0;
-    background: var(--code-bg);
-    color: var(--code-ink);
+  .trust-row {
+    display: flex; gap: 22px; flex-wrap: wrap; margin-top: 28px;
+    font-size: 13px; color: var(--ink-3);
+  }
+  .trust-row .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+  /* Chat mockup — replaces the old terminal block */
+  .chat {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 22px 22px 26px;
+    box-shadow: 0 4px 12px rgba(17,15,31,0.04), 0 24px 64px rgba(90,79,207,0.10);
+    position: relative;
+  }
+  .chat-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 12.5px; color: var(--ink-3);
+  }
+  .chat-head .tab-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .tab-dot.r { background: #ff6058; }
+  .tab-dot.y { background: #ffbd2e; }
+  .tab-dot.g { background: #27c93f; }
+  .chat-head .title { margin-left: 10px; font-weight: 500; color: var(--ink-2); }
+
+  .msg { display: flex; gap: 10px; margin-bottom: 14px; }
+  .msg-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: inline-grid; place-items: center;
+    font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .msg-avatar.user { background: linear-gradient(135deg, #ffaf6b, #ff7a59); }
+  .msg-avatar.ai { background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
+  .msg-bubble {
+    background: var(--bg-soft);
     border-radius: 14px;
-    padding: 22px 24px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13.5px;
-    line-height: 1.65;
-    border: 1px solid #2a2924;
-    box-shadow: 0 6px 24px rgba(20,19,15,0.08);
-    overflow-x: auto;
+    padding: 10px 14px;
+    font-size: 14.5px;
+    color: var(--ink);
+    line-height: 1.5;
   }
-  .demo .you { color: #b9b3a5; }
-  .demo .ai  { color: #faf8f4; }
-  .demo .tool { color: #f0a878; }
-  .demo .arr { color: #5b9d6f; }
-  .demo strong { color: #f0a878; font-weight: 500; }
-  .demo .cursor {
-    display: inline-block; width: 7px; height: 14px;
-    background: var(--code-ink); vertical-align: -2px; margin-left: 1px;
-    animation: blink 1.1s steps(2) infinite;
+  .msg.ai .msg-bubble {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 14px;
   }
-  @keyframes blink { 50% { opacity: 0; } }
+  .msg.ai .msg-bubble .lead { margin: 0 0 12px; color: var(--ink-2); font-size: 14px; }
 
-  /* Generic block padding */
-  section.block { padding: 68px 0; border-top: 1px solid var(--line); }
-  .eyebrow {
+  /* Deal card inside the AI message */
+  .deal-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center;
+    background: linear-gradient(180deg, #ffffff, #fbfaff);
+    transition: transform .12s;
+  }
+  .deal-card + .deal-card { margin-top: 8px; }
+  .deal-card:hover { transform: translateY(-1px); border-color: var(--brand); }
+  .merchant-logo {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: inline-grid; place-items: center;
+    font-weight: 800; font-size: 16px; color: white;
+    letter-spacing: -0.02em;
+  }
+  .logo-amazon { background: linear-gradient(135deg,#ff9900,#ffac3a); }
+  .logo-bestbuy { background: linear-gradient(135deg,#0046be,#0066d6); }
+  .logo-costco { background: linear-gradient(135deg,#e31837,#c4142d); }
+  .logo-target { background: linear-gradient(135deg,#cc0000,#ff1a1a); }
+  .logo-walmart { background: linear-gradient(135deg,#0071ce,#0084e8); }
+  .deal-card .title { font-size: 13.5px; font-weight: 600; color: var(--ink); margin: 0; line-height: 1.4; }
+  .deal-card .meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .deal-card .meta strong { color: var(--green); font-weight: 600; }
+  .deal-card .meta .was { text-decoration: line-through; margin-right: 6px; }
+  .deal-card .right { text-align: right; }
+  .deal-card .price { font-size: 17px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+  .deal-card .code {
+    display: inline-flex; align-items: center; gap: 4px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11.5px;
-    color: var(--ink-3);
+    font-size: 11.5px; font-weight: 500;
+    background: var(--green-soft); color: var(--green);
+    padding: 3px 8px; border-radius: 6px;
+    margin-top: 4px;
+  }
+  .more-deals { font-size: 13px; color: var(--ink-3); margin-top: 12px; }
+  .more-deals strong { color: var(--ink-2); font-weight: 600; }
+
+  /* Sections */
+  section.block { padding: 76px 0; border-top: 1px solid var(--line); }
+  .eyebrow {
+    font-size: 13px; font-weight: 600;
+    color: var(--brand);
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.08em;
     margin-bottom: 14px;
   }
   h2.section-title {
-    font-family: 'Newsreader', serif;
-    font-weight: 400;
-    font-size: clamp(32px, 4vw, 44px);
-    line-height: 1.12;
-    letter-spacing: -0.02em;
-    margin: 0 0 14px;
+    font-weight: 700;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin: 0 0 16px;
   }
-  h2.section-title .italic { font-style: italic; }
+  h2.section-title em { font-style: normal; color: var(--brand); }
   .section-lede {
     font-size: 17px;
     color: var(--ink-2);
-    max-width: 600px;
-    margin-bottom: 40px;
+    max-width: 620px;
+    margin-bottom: 44px;
   }
 
-  /* Install — three integration cards */
-  .install-grid {
-    display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr);
-  }
-  @media (max-width: 800px) { .install-grid { grid-template-columns: 1fr; } }
+  /* Install grid */
+  .install-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 880px) { .install-grid { grid-template-columns: 1fr; } }
   .install-card {
     background: var(--bg-card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 22px;
     display: flex; flex-direction: column;
+    transition: border-color .12s, transform .12s;
   }
+  .install-card:hover { border-color: var(--brand); transform: translateY(-2px); }
   .install-card h3 {
-    font-size: 15px;
-    font-weight: 500;
-    margin: 0 0 4px;
-    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 700;
+    margin: 0 0 4px; display: flex; align-items: center; gap: 10px;
   }
+  .install-card .icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: inline-grid; place-items: center; color: white;
+  }
+  .icon-claude { background: linear-gradient(135deg,#d97757,#e07a35); }
+  .icon-chatgpt { background: linear-gradient(135deg,#10a37f,#1ec48d); }
+  .icon-cursor { background: linear-gradient(135deg,#1e1e2c,#2d2d4a); }
   .install-card .availability {
-    font-size: 12px; color: var(--ink-3); margin-bottom: 16px;
+    font-size: 12px; color: var(--ink-3); margin-bottom: 14px;
   }
   pre.snippet {
     margin: 0 0 14px;
-    background: var(--code-bg); color: var(--code-ink);
-    padding: 14px 16px; border-radius: 8px;
+    background: #14131f; color: #e8e5f5;
+    padding: 14px 16px; border-radius: 10px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px; line-height: 1.6;
     overflow-x: auto;
-    position: relative;
-    flex: 1;
+    position: relative; flex: 1;
   }
   pre.snippet .copy {
     position: absolute; top: 8px; right: 8px;
-    font-size: 10.5px; padding: 3px 9px;
-    background: rgba(255,255,255,0.08); color: var(--code-ink);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 5px; cursor: pointer; font-family: inherit;
+    font-size: 10.5px; padding: 4px 10px;
+    background: rgba(255,255,255,0.07); color: #e8e5f5;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 6px; cursor: pointer; font-family: inherit;
     transition: background .12s;
   }
-  pre.snippet .copy:hover { background: rgba(255,255,255,0.2); }
-  pre.snippet .copy.ok { background: rgba(91,157,111,0.3); }
-  .install-card .help {
-    font-size: 13px; color: var(--ink-3); margin: 0;
-  }
-  .install-card .help a { color: var(--ink-2); }
-
-  /* What-it-does */
-  .does-grid {
-    display: grid; gap: 32px;
-    grid-template-columns: repeat(2, 1fr);
-  }
-  @media (max-width: 700px) { .does-grid { grid-template-columns: 1fr; } }
-  .does-item h3 {
-    font-family: 'Newsreader', serif;
-    font-weight: 400;
-    font-style: italic;
-    font-size: 22px;
-    margin: 0 0 6px;
-    color: var(--ink);
-  }
-  .does-item p { margin: 0; color: var(--ink-2); font-size: 15px; }
-  .does-item code {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12.5px;
-    background: var(--bg-soft);
-    padding: 1px 6px;
-    border-radius: 4px;
-    color: var(--accent);
-  }
+  pre.snippet .copy:hover { background: rgba(255,255,255,0.18); }
+  pre.snippet .copy.ok { background: rgba(47,158,107,0.32); }
+  .install-card .help { font-size: 13px; color: var(--ink-3); margin: 0; }
+  .install-card .help a { color: var(--ink-2); border-bottom: 1px solid var(--line); }
+  .install-card .help a:hover { color: var(--ink); border-color: var(--ink); }
 
   /* Stats strip */
   .stats {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
-    padding: 36px 28px;
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    margin: 28px 0 0;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    background: var(--ink); color: var(--bg-card);
+    border-radius: 18px;
+    overflow: hidden;
+    margin-top: 36px;
   }
-  @media (max-width: 600px) { .stats { grid-template-columns: 1fr; gap: 20px; } }
+  @media (max-width: 700px) { .stats { grid-template-columns: 1fr; } }
+  .stat { padding: 28px 24px; }
+  .stat:not(:last-child) {
+    border-right: 1px solid rgba(255,255,255,0.08);
+  }
+  @media (max-width: 700px) { .stat:not(:last-child) { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); } }
   .stat .num {
-    font-family: 'Newsreader', serif;
-    font-size: 36px;
-    line-height: 1;
-    letter-spacing: -0.02em;
+    font-size: 36px; font-weight: 800;
+    letter-spacing: -0.025em;
     margin-bottom: 4px;
+    color: white;
   }
-  .stat .num .italic { font-style: italic; color: var(--accent); }
-  .stat .label { font-size: 13px; color: var(--ink-3); }
+  .stat .num .accent { color: var(--brand-2); }
+  .stat .label { font-size: 13px; color: rgba(255,255,255,0.6); font-weight: 500; }
 
-  /* Money & waitlist */
-  .money-card {
+  /* Features */
+  .features-grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  @media (max-width: 880px) { .features-grid { grid-template-columns: 1fr; } }
+  .feature {
     background: var(--bg-card);
     border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 36px 36px 32px;
-    margin: 36px 0 0;
+    border-radius: var(--radius);
+    padding: 26px;
+    transition: border-color .12s;
   }
-  .money-card h3 {
-    font-family: 'Newsreader', serif;
-    font-weight: 400;
-    font-size: 24px;
-    margin: 0 0 8px;
-    letter-spacing: -0.01em;
+  .feature:hover { border-color: var(--brand); }
+  .feature .ficon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--brand-soft); color: var(--brand);
+    display: inline-grid; place-items: center;
+    margin-bottom: 14px;
   }
-  .money-card p { color: var(--ink-2); margin: 0 0 18px; font-size: 15px; }
-  .money-card form { display: flex; gap: 8px; max-width: 480px; }
-  .money-card input[type=email] {
+  .feature .ficon svg { width: 18px; height: 18px; }
+  .feature h3 { font-size: 16px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .feature p { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.55; }
+
+  /* Waitlist */
+  .waitlist-card {
+    background: linear-gradient(135deg, #1d1a32, #14131f);
+    color: var(--bg-card);
+    border-radius: 20px;
+    padding: 48px 44px;
+    margin-top: 12px;
+    position: relative; overflow: hidden;
+  }
+  .waitlist-card::after {
+    content: '';
+    position: absolute; top: -120px; right: -120px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, rgba(124,112,232,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .waitlist-inner { position: relative; max-width: 560px; }
+  .waitlist-card h3 {
+    font-size: 28px; font-weight: 700; margin: 0 0 10px; letter-spacing: -0.02em;
+  }
+  .waitlist-card p { color: rgba(255,255,255,0.7); margin: 0 0 22px; font-size: 15px; }
+  .waitlist-card form { display: flex; gap: 8px; max-width: 480px; }
+  .waitlist-card input[type=email] {
     flex: 1;
-    padding: 11px 16px;
-    font-family: inherit; font-size: 14px;
-    background: var(--bg-soft);
-    border: 1px solid var(--line);
-    color: var(--ink);
-    border-radius: 8px;
+    padding: 13px 18px;
+    font-family: inherit; font-size: 14.5px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: white;
+    border-radius: 999px;
     outline: none;
     transition: border-color .12s, background .12s;
   }
-  .money-card input[type=email]:focus { border-color: var(--ink); background: var(--bg-card); }
-  .money-card input[type=email]::placeholder { color: var(--ink-3); }
-  .money-card button {
-    padding: 11px 22px;
-    font-family: inherit; font-size: 14px; font-weight: 500;
-    background: var(--ink);
-    color: var(--bg);
-    border: none;
-    border-radius: 8px;
+  .waitlist-card input[type=email]::placeholder { color: rgba(255,255,255,0.45); }
+  .waitlist-card input[type=email]:focus { border-color: white; background: rgba(255,255,255,0.14); }
+  .waitlist-card button {
+    padding: 13px 24px;
+    font-family: inherit; font-size: 14.5px; font-weight: 600;
+    background: white; color: var(--ink);
+    border: none; border-radius: 999px;
     cursor: pointer;
-    transition: background .12s;
+    transition: transform .12s;
   }
-  .money-card button:hover { background: var(--accent); }
-  .money-card .status {
-    margin-top: 12px; font-size: 13px; color: var(--ink-3); min-height: 1.3em;
+  .waitlist-card button:hover { transform: translateY(-1px); }
+  .waitlist-card .status {
+    margin-top: 14px; font-size: 13.5px; color: rgba(255,255,255,0.65);
+    min-height: 1.3em;
   }
-  .money-card .status.ok { color: #4a8c5b; }
-  .money-card .status.err { color: var(--accent); }
+  .waitlist-card .status.ok { color: #9be5be; }
+  .waitlist-card .status.err { color: #ffb3a8; }
 
   /* Footer */
-  footer {
-    padding: 44px 0 56px;
-    color: var(--ink-3);
-    font-size: 13px;
-  }
-  footer .row {
-    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
-  }
+  footer { padding: 48px 0 56px; color: var(--ink-3); font-size: 13.5px; }
+  footer .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
   footer .links { display: flex; gap: 22px; }
-  footer a { color: var(--ink-3); text-decoration: none; }
+  footer a { color: var(--ink-3); }
   footer a:hover { color: var(--ink); }
 </style>
 </head>
@@ -341,30 +421,106 @@ export function landingHtml(data: LandingData = {}): string {
 
 <header>
   <div class="container row">
-    <a class="logo" href="/">snap-ai</a>
+    <a class="logo" href="/">
+      <span class="logo-mark">S</span>
+      Snap-AI
+    </a>
     <nav class="nav">
+      <a href="#how">How it works</a>
       <a href="#install">Install</a>
-      <a href="#what">What it does</a>
-      <span class="live-pill"><span class="dot"></span>${ingestStatus}</span>
+      <a class="nav-cta" href="#waitlist">Get notified</a>
     </nav>
   </div>
 </header>
 
 <section class="hero">
-  <div class="container-narrow">
-    <h1 class="hero-title">Tell Claude to <span class="italic">find you the deal.</span></h1>
-    <p class="hero-sub">Snap-AI is an MCP server that gives Claude, ChatGPT, and Cursor working coupon codes and merchant-verified deal links. Ask. Click. Save. Free while we're early.</p>
-    <div class="cta-row">
-      <a class="btn" href="#install">Install →</a>
-      <a class="btn btn-ghost" href="#what">See what it does</a>
-    </div>
+  <div class="container">
+    <div class="hero-inner">
+      <div>
+        <span class="hero-tag">${ingestStatus} · ${dealCount} deals live</span>
+        <h1 class="hero-title">Find good deals online with <em>your AI.</em></h1>
+        <p class="hero-sub">Tell Claude, ChatGPT, or Cursor what you want. Snap-AI hands them working codes and live prices — you save money without thinking about it. Free.</p>
+        <div class="cta-row">
+          <a class="btn" href="#install">Add to your AI →</a>
+          <a class="btn btn-ghost" href="#how">See how it works</a>
+        </div>
+        <div class="trust-row">
+          <span><span class="dot"></span>Free, no signup</span>
+          <span><span class="dot"></span>Verified codes</span>
+          <span><span class="dot"></span>Real merchant links</span>
+        </div>
+      </div>
 
-    <div class="demo" aria-hidden="true">
-      <span class="you">you ›</span> <span class="ai">find me a deal on a 65" OLED tv under $1500</span><br/>
-      <span class="arr">snap-ai →</span> <span class="tool">find_deals</span>({ <span class="ai">query: "65 OLED"</span>, <span class="ai">cartTotalCents: 150000</span> })<br/>
-      <span class="arr">←</span> <span class="ai">3 deals from <strong>Best Buy</strong>, <strong>Amazon</strong>, <strong>Costco</strong></span><br/>
-      <span class="you">you ›</span> <span class="ai">show me the best one with a working code</span><br/>
-      <span class="arr">snap-ai →</span> <span class="tool">get_deal</span>(<span class="ai">"9b1c..."</span>) → <span class="ai">$1,299 + free shipping, code <strong>SAVE150</strong><span class="cursor"></span></span>
+      <div class="chat" aria-hidden="true">
+        <div class="chat-head">
+          <span class="tab-dot r"></span>
+          <span class="tab-dot y"></span>
+          <span class="tab-dot g"></span>
+          <span class="title">claude · snap-ai connected</span>
+        </div>
+        <div class="msg">
+          <span class="msg-avatar user">U</span>
+          <div class="msg-bubble">Find me a deal on AirPods Pro</div>
+        </div>
+        <div class="msg ai">
+          <span class="msg-avatar ai">AI</span>
+          <div class="msg-bubble">
+            <p class="lead">Here's the best price I found right now:</p>
+            <div class="deal-card">
+              <span class="merchant-logo logo-amazon">A</span>
+              <div>
+                <p class="title">Apple AirPods Pro (2nd&nbsp;Gen) with USB-C</p>
+                <p class="meta"><span class="was">$249</span><strong>save $60</strong> · in stock</p>
+                <span class="code">code: SAVE60</span>
+              </div>
+              <div class="right">
+                <div class="price">$189</div>
+              </div>
+            </div>
+            <div class="deal-card">
+              <span class="merchant-logo logo-bestbuy">BB</span>
+              <div>
+                <p class="title">AirPods Pro 2 · open-box</p>
+                <p class="meta"><span class="was">$249</span><strong>save $50</strong> · ships free</p>
+              </div>
+              <div class="right">
+                <div class="price">$199</div>
+              </div>
+            </div>
+            <div class="more-deals">+ 2 more from <strong>Costco</strong> and <strong>Target</strong>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="how">
+  <div class="container">
+    <div class="eyebrow">How it works</div>
+    <h2 class="section-title">Three things <em>your AI</em> didn't have before.</h2>
+    <p class="section-lede">Snap-AI is a small server your agent talks to. It pulls deal feeds from affiliate networks, community-curated sites, and live shopping search — then hands your AI the codes and links that actually work.</p>
+    <div class="features-grid">
+      <div class="feature">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+        <h3>Search every store at once.</h3>
+        <p>Filter by merchant, price, category, country. We index thousands of deals across 80+ affiliate networks plus Google Shopping fallback.</p>
+      </div>
+      <div class="feature">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <h3>Real working codes.</h3>
+        <p>Codes come from merchant-verified affiliate feeds. Every checkout pings us — codes that stop working get pulled automatically.</p>
+      </div>
+      <div class="feature">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <h3>Built for speed.</h3>
+        <p>Median <strong>4&nbsp;ms</strong> search. Your AI gets answers as fast as it can ask. No webview, no scraping, no waiting.</p>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num"><span class="accent">${dealCount}</span></div><div class="label">deals indexed right now</div></div>
+      <div class="stat"><div class="num"><span class="accent">${merchantCount}</span></div><div class="label">merchants with active deals</div></div>
+      <div class="stat"><div class="num"><span class="accent">~4ms</span></div><div class="label">median search latency</div></div>
     </div>
   </div>
 </section>
@@ -372,16 +528,12 @@ export function landingHtml(data: LandingData = {}): string {
 <section class="block" id="install">
   <div class="container">
     <div class="eyebrow">Install</div>
-    <h2 class="section-title">One <span class="italic">URL.</span> Three places to paste it.</h2>
-    <p class="section-lede">No key needed. We're free while we're new — pay nothing, get every deal.</p>
-
+    <h2 class="section-title">Add Snap-AI to <em>your AI</em> in 60 seconds.</h2>
+    <p class="section-lede">Pick your assistant. Paste one snippet. Done. No account, no API key — free while we're early.</p>
     <div class="install-grid">
       <div class="install-card">
-        <h3>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/><path d="M12 6a6 6 0 100 12 6 6 0 000-12z"/></svg>
-          Claude Desktop
-        </h3>
-        <div class="availability">macOS, Windows · works today</div>
+        <h3><span class="icon icon-claude"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a6 6 0 110 12 6 6 0 010-12z"/></svg></span>Claude Desktop</h3>
+        <div class="availability">macOS &amp; Windows · works today</div>
 <pre class="snippet"><button class="copy" data-copy="claude">Copy</button><span id="claude-snippet">{
   "mcpServers": {
     "snap-ai": {
@@ -393,26 +545,18 @@ export function landingHtml(data: LandingData = {}): string {
 }</span></pre>
         <p class="help">Paste into <a href="https://docs.anthropic.com/en/docs/claude-code/mcp" target="_blank" rel="noopener">claude_desktop_config.json</a>, restart Claude.</p>
       </div>
-
       <div class="install-card">
-        <h3>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.45a4 4 0 00-3.45-2A4 4 0 0015.56 9 4 4 0 0012 7a4 4 0 00-3.56 2A4 4 0 005.17 7.45a4 4 0 00-3.45 2 4 4 0 00.45 4.55l9.1 8.55a1 1 0 001.46 0l9.1-8.55a4 4 0 00.45-4.55z"/></svg>
-          ChatGPT
-        </h3>
-        <div class="availability">via Custom Connectors · Plus/Pro</div>
+        <h3><span class="icon icon-chatgpt"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.45a4 4 0 00-3.45-2A4 4 0 0015.56 9 4 4 0 0012 7a4 4 0 00-3.56 2A4 4 0 005.17 7.45a4 4 0 00-3.45 2 4 4 0 00.45 4.55l9.1 8.55a1 1 0 001.46 0l9.1-8.55a4 4 0 00.45-4.55z"/></svg></span>ChatGPT</h3>
+        <div class="availability">Custom Connectors · Plus/Pro</div>
 <pre class="snippet"><button class="copy" data-copy="chatgpt">Copy</button><span id="chatgpt-snippet">https://mcp.snap-ai.dev/mcp
 
 Settings → Connectors →
 Add custom connector → paste URL</span></pre>
-        <p class="help">Custom Connectors are a paid-plan feature on chatgpt.com — same URL, just a different UI.</p>
+        <p class="help">Connectors are a paid-plan feature on chatgpt.com. Same URL — different UI.</p>
       </div>
-
       <div class="install-card">
-        <h3>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4l9 5 9-5v3l-9 5-9-5V4zm0 7l9 5 9-5v3l-9 5-9-5v-3zm0 7l9 5 9-5v3l-9 5-9-5v-3z"/></svg>
-          Cursor
-        </h3>
-        <div class="availability">macOS, Windows, Linux</div>
+        <h3><span class="icon icon-cursor"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4l9 5 9-5v3l-9 5-9-5V4zm0 7l9 5 9-5v3l-9 5-9-5v-3z"/></svg></span>Cursor</h3>
+        <div class="availability">macOS · Windows · Linux</div>
 <pre class="snippet"><button class="copy" data-copy="cursor">Copy</button><span id="cursor-snippet">{
   "mcpServers": {
     "snap-ai": {
@@ -423,56 +567,21 @@ Add custom connector → paste URL</span></pre>
         <p class="help">Paste into <code>~/.cursor/mcp.json</code> — agent picks it up immediately.</p>
       </div>
     </div>
-
-    <div class="stats">
-      <div class="stat"><div class="num"><span class="italic">${dealCount}</span></div><div class="label">deals indexed right now</div></div>
-      <div class="stat"><div class="num"><span class="italic">${merchantCount}</span></div><div class="label">merchants with active deals</div></div>
-      <div class="stat"><div class="num"><span class="italic">~4ms</span></div><div class="label">median find_deals latency</div></div>
-    </div>
   </div>
 </section>
 
-<section class="block" id="what">
+<section class="block" id="waitlist">
   <div class="container">
-    <div class="eyebrow">What it does</div>
-    <h2 class="section-title">Five tools. No <span class="italic">scraping.</span> Real codes.</h2>
-    <p class="section-lede">The catalog is rebuilt from merchant-verified affiliate feeds and community deal aggregators every few minutes. Codes that stop working get pulled automatically based on agent telemetry.</p>
-
-    <div class="does-grid">
-      <div class="does-item">
-        <h3>Find deals fast.</h3>
-        <p>Filter by merchant, query, country, cart total. <code>find_deals</code> returns the top matches in milliseconds, ordered by freshness.</p>
+    <div class="waitlist-card">
+      <div class="waitlist-inner">
+        <h3>Get a heads-up when we launch big.</h3>
+        <p>We're shipping every few days. Drop your email — we'll ping you when we open up early access on a hosted endpoint and again if we ship something noteworthy. No newsletter, no upsell.</p>
+        <form id="waitlist-form" novalidate>
+          <input id="waitlist-email" type="email" required placeholder="your@email.com" autocomplete="email" />
+          <button type="submit">Get notified</button>
+        </form>
+        <div class="status" id="waitlist-status" aria-live="polite"></div>
       </div>
-      <div class="does-item">
-        <h3>Get the buy link.</h3>
-        <p>Each deal includes a <code>deeplink</code> the agent can hand the user — straight to the merchant's product page, not a redirector.</p>
-      </div>
-      <div class="does-item">
-        <h3>Pull working codes.</h3>
-        <p><code>get_deal</code> returns the full discount spec, stack rules, geo scope, and the actual coupon code when one applies.</p>
-      </div>
-      <div class="does-item">
-        <h3>Watch Amazon prices.</h3>
-        <p><code>get_price_history</code> returns 30/90/all-time lows for any ASIN — Keepa-backed, auto-refreshed on demand.</p>
-      </div>
-      <div class="does-item">
-        <h3>Report what worked.</h3>
-        <p><code>report_code_result</code> takes a yes/no after checkout. Codes that consistently fail get auto-deactivated.</p>
-      </div>
-      <div class="does-item">
-        <h3>Browse merchants.</h3>
-        <p><code>list_merchants</code> walks every retailer with at least one active deal, filtered by category or country.</p>
-      </div>
-    </div>
-
-    <div class="money-card">
-      <h3>Want early access?</h3>
-      <p>Drop your email. We'll ping you when we open up the hosted endpoint and again if we ship anything noteworthy. No newsletter, no upsell.</p>
-      <form id="waitlist-form" novalidate>
-        <input id="waitlist-email" type="email" required placeholder="your@email.com" autocomplete="email" />
-        <button type="submit">Get notified</button>
-      </form>
-      <div class="status" id="waitlist-status" aria-live="polite"></div>
     </div>
   </div>
 </section>
@@ -544,9 +653,9 @@ Add custom connector → paste URL</span></pre>
 </html>`;
 }
 
-function formatThousands(n: number): string {
-  if (!Number.isFinite(n) || n <= 0) return '—';
-  return n.toLocaleString('en-US');
+function formatThousands(n: number | undefined): string {
+  if (!Number.isFinite(n ?? NaN) || (n ?? 0) <= 0) return '—';
+  return (n as number).toLocaleString('en-US');
 }
 
 function formatIngestStatus(hoursAgo: number | undefined): string {

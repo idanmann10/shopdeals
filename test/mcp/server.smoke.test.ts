@@ -52,13 +52,14 @@ async function bootClientServer(ctx: McpContext) {
 }
 
 describe('MCP server smoke test', () => {
-  it('lists exactly the 5 declared tools with non-empty descriptions', async () => {
+  it('lists exactly the declared tools with non-empty descriptions', async () => {
     const { client, server } = await bootClientServer(ctxWith(['deals:read', 'prices:read']));
     const list = await client.listTools();
     const names = list.tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         'find_deals',
+        'find_products',
         'get_deal',
         'get_price_history',
         'list_merchants',

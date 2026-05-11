@@ -5,12 +5,14 @@
  */
 import { AwinAdapter } from './awin.ts';
 import type { SourceAdapter } from './common.ts';
+import { CouponApiAdapter } from './couponapi.ts';
 import { FmtcAdapter } from './fmtc.ts';
 import { ImpactAdapter } from './impact.ts';
 import { SlickdealsAdapter } from './slickdeals.ts';
 
 export type { RawDealInput, SourceAdapter, IngestResult } from './common.ts';
 export { AwinAdapter } from './awin.ts';
+export { CouponApiAdapter } from './couponapi.ts';
 export { FmtcAdapter } from './fmtc.ts';
 export { ImpactAdapter } from './impact.ts';
 export { SlickdealsAdapter } from './slickdeals.ts';
@@ -21,6 +23,7 @@ export function getAllAdapters(): SourceAdapter[] {
     new FmtcAdapter(),
     new AwinAdapter(),
     new ImpactAdapter(),
+    new CouponApiAdapter(),
     new SlickdealsAdapter(),
   ];
 }
@@ -34,6 +37,8 @@ export function getAdapter(network: string): SourceAdapter | undefined {
       return new AwinAdapter();
     case 'impact':
       return new ImpactAdapter();
+    case 'couponapi':
+      return new CouponApiAdapter();
     case 'slickdeals':
       return new SlickdealsAdapter();
     default:

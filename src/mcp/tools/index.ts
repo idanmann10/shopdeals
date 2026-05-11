@@ -7,6 +7,7 @@
  */
 
 import * as findDeals from './find-deals.ts';
+import * as findProducts from './find-products.ts';
 import * as getDeal from './get-deal.ts';
 import * as listMerchants from './list-merchants.ts';
 import * as getPriceHistory from './get-price-history.ts';
@@ -26,6 +27,7 @@ export interface ToolModule<I = unknown, O extends Record<string, unknown> = Rec
 // remain strongly typed for direct consumers and tests.
 export const tools: ReadonlyArray<ToolModule<never, Record<string, unknown>>> = [
   findDeals as unknown as ToolModule<never, Record<string, unknown>>,
+  findProducts as unknown as ToolModule<never, Record<string, unknown>>,
   getDeal as unknown as ToolModule<never, Record<string, unknown>>,
   listMerchants as unknown as ToolModule<never, Record<string, unknown>>,
   getPriceHistory as unknown as ToolModule<never, Record<string, unknown>>,
@@ -35,4 +37,4 @@ export const tools: ReadonlyArray<ToolModule<never, Record<string, unknown>>> = 
 export const toolByName: Readonly<Record<string, ToolModule<never, Record<string, unknown>>>> =
   Object.fromEntries(tools.map((t) => [t.name, t]));
 
-export { findDeals, getDeal, listMerchants, getPriceHistory, reportCodeResult };
+export { findDeals, findProducts, getDeal, listMerchants, getPriceHistory, reportCodeResult };
