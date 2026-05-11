@@ -16,7 +16,7 @@ import type { SourceAdapter } from '../sources/common.ts';
 import { getAdapter, getAllAdapters } from '../sources/index.ts';
 import { upsertDeals } from '../sources/upsert.ts';
 
-const KNOWN = new Set(['fmtc', 'awin', 'impact', 'all']);
+const KNOWN = new Set(['fmtc', 'awin', 'impact', 'slickdeals', 'all']);
 
 function pickAdapters(arg: string | undefined): SourceAdapter[] {
   const target = (arg ?? 'all').toLowerCase();
