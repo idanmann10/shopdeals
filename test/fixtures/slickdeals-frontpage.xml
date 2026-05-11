@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Slickdeals: Frontpage Deals</title>
+    <link>https://slickdeals.net/</link>
+    <description>Hot deals voted to the front page</description>
+    <item>
+      <title><![CDATA[[Best Buy] Sony WH-1000XM5 Wireless Headphones $279]]></title>
+      <link>https://slickdeals.net/f/12345-sony-wh-1000xm5-279</link>
+      <description><![CDATA[Sony's flagship noise-cancelling headphones, normally $399. Use this link &amp; <a href="https://bestbuy.com">add to cart</a>.]]></description>
+      <pubDate>Mon, 12 May 2026 14:00:00 GMT</pubDate>
+      <category>Electronics</category>
+      <guid isPermaLink="false">slickdeals-12345</guid>
+    </item>
+    <item>
+      <title>Patagonia Better Sweater Jacket 30% off at REI</title>
+      <link>https://slickdeals.net/f/22222-patagonia-rei</link>
+      <description><![CDATA[Members get an extra 10% off. Save 30% on Patagonia outerwear at REI.]]></description>
+      <pubDate>Mon, 12 May 2026 12:30:00 GMT</pubDate>
+      <category>Apparel</category>
+      <guid isPermaLink="false">slickdeals-22222</guid>
+    </item>
+    <item>
+      <title><![CDATA[[Costco] Apple AirPods Pro (2nd Gen) $189]]></title>
+      <link>https://slickdeals.net/f/33333-airpods-pro</link>
+      <description><![CDATA[Costco membership required.]]></description>
+      <pubDate>Mon, 12 May 2026 11:00:00 GMT</pubDate>
+      <category>Electronics</category>
+      <guid>slickdeals-33333</guid>
+    </item>
+    <item>
+      <title>random deal nobody can attribute</title>
+      <link>https://slickdeals.net/f/44444</link>
+      <description>No merchant in the title, no bracket either.</description>
+      <pubDate>Mon, 12 May 2026 10:00:00 GMT</pubDate>
+      <guid>slickdeals-44444</guid>
+    </item>
+    <item>
+      <title>Anker 30W USB-C Charger $14.99 from Amazon</title>
+      <link>https://slickdeals.net/f/55555-anker</link>
+      <description>Normally $25. Free shipping with Prime.</description>
+      <pubDate>Mon, 12 May 2026 09:00:00 GMT</pubDate>
+      <category>Electronics</category>
+      <guid>slickdeals-55555</guid>
+    </item>
+  </channel>
+</rss>
