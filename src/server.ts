@@ -18,6 +18,8 @@ import { db } from './db/client.ts';
 import { env } from './lib/env.ts';
 import { log } from './lib/log.ts';
 import { KeepaClient } from './sources/keepa.ts';
+import { landingHtml } from './landing/page.ts';
+import { registerWaitlistRoute } from './landing/waitlist.ts';
 import type { AuthPrincipal } from './auth/types.ts';
 
 export interface BuildAppOptions {
@@ -43,13 +45,20 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
 
   // Public, unauthenticated endpoints.
   app.get('/healthz', (c) => c.json({ ok: true }));
-  app.get('/', (c) =>
+
+  // HTML landing page lives at `/`. Machine-readable discovery moved to
+  // `/api` so agents can still introspect without parsing HTML.
+  app.get('/', (c) => c.html(landingHtml()));
+  app.get('/api', (c) =>
     c.json({
       name: 'snap-ai',
       mcp: '/mcp',
       docs: 'https://github.com/idanmann10/snap-ai',
     }),
   );
+
+  // Waitlist signup is public — it's the landing-page CTA, so no auth.
+  registerWaitlistRoute(app);
 
   // Stripe webhook is mounted before the auth gate — it verifies signatures
   // itself and must accept unauthenticated POSTs from Stripe.
