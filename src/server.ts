@@ -17,6 +17,7 @@ import { registerStripeWebhook } from './billing/webhook.ts';
 import { db } from './db/client.ts';
 import { env } from './lib/env.ts';
 import { log } from './lib/log.ts';
+import { KeepaClient } from './sources/keepa.ts';
 import type { AuthPrincipal } from './auth/types.ts';
 
 export interface BuildAppOptions {
@@ -66,6 +67,10 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
   return app;
 }
 
+// Single shared Keepa client. It's stateless aside from config; per-request
+// construction would only thrash the env() cache.
+const keepaClient = new KeepaClient();
+
 async function deriveMcpContext(c: Context): Promise<McpContext> {
   const principal = c.get('principal') as AuthPrincipal | undefined;
   return {
@@ -73,6 +78,7 @@ async function deriveMcpContext(c: Context): Promise<McpContext> {
     clientHash: principal?.clientHash ?? 'anonymous',
     ...(principal?.orgId !== undefined ? { orgId: principal.orgId } : {}),
     scopes: principal?.scopes ?? ['deals:read'],
+    keepa: keepaClient,
   };
 }
 
