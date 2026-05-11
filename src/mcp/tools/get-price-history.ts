@@ -1,14 +1,17 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { and, asc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, sql } from 'drizzle-orm';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { McpContext } from '../context.ts';
 import { prices } from '../../db/schema.ts';
+import type { NewPrice } from '../../db/schema.ts';
+import { KEEPA_DEFAULT_STALENESS_MS, KeepaClient } from '../../sources/keepa.ts';
+import { log } from '../../lib/log.ts';
 
 export const name = 'get_price_history';
 
 export const description =
-  'Return observed price history for a product (Amazon ASIN or canonical product URL). Computes 30d, 90d and all-time lows. Requires the prices:read scope.';
+  'Return observed price history for an Amazon ASIN or product URL with 30d, 90d, and all-time lows. ASIN queries auto-refresh from Keepa when cached data is >24h old. Requires prices:read.';
 
 export const REQUIRED_SCOPE = 'prices:read';
 
@@ -58,6 +61,14 @@ export async function handler(
       ErrorCode.InvalidRequest,
       `forbidden: ${REQUIRED_SCOPE} scope required`,
     );
+  }
+
+  // ASIN queries are Keepa-backed. Before reading the cache, check whether
+  // the latest observation is older than the freshness window — if so, hit
+  // Keepa, persist the new points, then fall through to the read below so
+  // the same shaping logic runs over both fresh and historical rows.
+  if (input.asin) {
+    await maybeRefreshFromKeepa(input.asin, ctx);
   }
 
   const conditions = [] as Array<ReturnType<typeof eq>>;
@@ -116,4 +127,75 @@ export async function handler(
   if (lowAllTime !== undefined) result.lowAllTime = lowAllTime;
   if (last) result.current = last.priceCents;
   return result;
+}
+
+/**
+ * Check freshness for `asin`, and if stale (or empty), pull fresh history
+ * from Keepa and persist it. Failures are logged but never thrown — the
+ * surrounding handler will still serve whatever's already in the cache,
+ * which is preferable to a 500 when Keepa is rate-limited.
+ *
+ * The freshness window matches Keepa's own cron cadence (≈hourly) but with
+ * a generous 24h grace so we don't burn tokens on chatty agents.
+ */
+async function maybeRefreshFromKeepa(asin: string, ctx: McpContext): Promise<void> {
+  const keepa = ctx.keepa ?? new KeepaClient();
+  if (!keepa.isConfigured()) return;
+
+  const normalized = asin.trim().toUpperCase();
+  if (!/^[A-Z0-9]{10}$/.test(normalized)) return;
+
+  const [latest] = await ctx.db
+    .select({ observedAt: prices.observedAt })
+    .from(prices)
+    .where(eq(prices.asin, normalized))
+    .orderBy(desc(prices.observedAt))
+    .limit(1);
+
+  if (latest && Date.now() - latest.observedAt.getTime() < KEEPA_DEFAULT_STALENESS_MS) {
+    return;
+  }
+
+  let result: Awaited<ReturnType<KeepaClient['fetchPriceHistory']>>;
+  try {
+    result = await keepa.fetchPriceHistory({ asin: normalized });
+  } catch (err) {
+    log.warn(
+      { asin: normalized, err: err instanceof Error ? err.message : String(err) },
+      'Keepa fetch failed; serving cached price history',
+    );
+    return;
+  }
+
+  if (result.points.length === 0) return;
+
+  // Avoid re-inserting overlap with whatever we already have. The `prices`
+  // table has no unique constraint on (asin, observedAt), so cheap
+  // de-duplication on the client side is the simplest safe option.
+  const latestCachedMs = latest?.observedAt.getTime() ?? 0;
+  const fresh = result.points.filter((p) => new Date(p.observedAt).getTime() > latestCachedMs);
+  if (fresh.length === 0) return;
+
+  const rows: NewPrice[] = fresh.map((p) => ({
+    asin: normalized,
+    productKey: normalized,
+    observedAt: new Date(p.observedAt),
+    priceCents: p.priceCents,
+    currency: result.currency,
+    availability: p.availability,
+    source: 'keepa',
+  }));
+
+  try {
+    await ctx.db.insert(prices).values(rows);
+    log.info(
+      { asin: normalized, inserted: rows.length, tokensLeft: result.tokensLeft },
+      'Keepa price history refreshed',
+    );
+  } catch (err) {
+    log.warn(
+      { asin: normalized, err: err instanceof Error ? err.message : String(err) },
+      'failed to persist Keepa price history',
+    );
+  }
 }

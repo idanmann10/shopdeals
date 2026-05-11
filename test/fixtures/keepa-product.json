@@ -1,0 +1,44 @@
+{
+  "products": [
+    {
+      "asin": "B0EXAMPLE0",
+      "csv": [
+        [
+          7964640, 2499,
+          7972000, 2299,
+          7980000, -1,
+          7988000, 2199,
+          7996000, 1899
+        ],
+        [
+          7964640, 2599,
+          7980000, 2399,
+          7996000, 1999
+        ],
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  ],
+  "tokensLeft": 1180,
+  "tokensConsumed": 6,
+  "refillIn": 60000,
+  "refillRate": 5,
+  "processingTimeInMs": 32,
+  "timestamp": 1762992000000
+}
