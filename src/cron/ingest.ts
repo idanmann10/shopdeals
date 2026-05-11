@@ -10,11 +10,12 @@
  * aren't configured (missing API keys) are skipped with a log line — this is
  * not an error.
  */
-import { closeDb } from '../db/client.ts';
+import { closeDb, db } from '../db/client.ts';
 import { log } from '../lib/log.ts';
 import type { SourceAdapter } from '../sources/common.ts';
 import { getAdapter, getAllAdapters } from '../sources/index.ts';
 import { upsertDeals } from '../sources/upsert.ts';
+import { runLifecyclePass } from './lifecycle.ts';
 
 const KNOWN = new Set(['fmtc', 'awin', 'impact', 'all']);
 
@@ -66,6 +67,19 @@ export async function runIngest(arg: string | undefined): Promise<number> {
         'adapter ingest failed'
       );
     }
+  }
+
+  // Lifecycle sweep runs even if some adapters failed — expiring/stale
+  // cleanup is independent of any single source's success and should keep
+  // happening on the cron interval.
+  try {
+    await runLifecyclePass(db());
+  } catch (err) {
+    log.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      'lifecycle sweep failed',
+    );
+    failures += 1;
   }
 
   return failures > 0 ? 1 : 0;
