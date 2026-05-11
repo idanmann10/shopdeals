@@ -29,6 +29,10 @@ const envSchema = z.object({
 
   VOYAGE_API_KEY: z.string().optional(),
 
+  // Affiliate / monetization tags. When set, find_deals and get_deal will
+  // rewrite outbound URLs through them. See src/lib/affiliate.ts.
+  AMAZON_ASSOCIATES_TAG: z.string().optional(),
+
   MCP_PUBLIC_URL: z.string().url().default('http://localhost:3000'),
   MCP_OAUTH_ISSUER: z.string().url().default('http://localhost:3000'),
 });

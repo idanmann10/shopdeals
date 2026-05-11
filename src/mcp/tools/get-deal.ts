@@ -101,7 +101,9 @@ export async function handler(
       eligibilitySummary: eligibilitySummary(d),
       startsAt: d.startsAt?.toISOString() ?? null,
       expiresAt: d.expiresAt?.toISOString() ?? null,
-      deeplink: d.deeplink,
+      // Affiliate-rewrite the outbound link if we have a rewriter wired.
+      // No-op when no tags are configured (tests, unconfigured dev).
+      deeplink: d.deeplink ? (ctx.affiliate?.rewrite(d.deeplink).url ?? d.deeplink) : null,
       attributionSource: d.attributionSource,
       sourceNetwork: d.sourceNetwork,
       lastSeenWorkingAt: d.lastSeenWorkingAt?.toISOString() ?? null,

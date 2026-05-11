@@ -19,7 +19,9 @@ import { env } from './lib/env.ts';
 import { log } from './lib/log.ts';
 import { KeepaClient } from './sources/keepa.ts';
 import { landingHtml } from './landing/page.ts';
+import { loadLandingStats } from './landing/stats.ts';
 import { registerWaitlistRoute } from './landing/waitlist.ts';
+import { createAffiliateRewriter } from './lib/affiliate.ts';
 import type { AuthPrincipal } from './auth/types.ts';
 
 export interface BuildAppOptions {
@@ -48,7 +50,11 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
 
   // HTML landing page lives at `/`. Machine-readable discovery moved to
   // `/api` so agents can still introspect without parsing HTML.
-  app.get('/', (c) => c.html(landingHtml()));
+  // Stats query failure renders with `—` placeholders rather than 500.
+  app.get('/', async (c) => {
+    const stats = await loadLandingStats(db()).catch(() => ({}));
+    return c.html(landingHtml(stats));
+  });
   app.get('/api', (c) =>
     c.json({
       name: 'snap-ai',
@@ -76,9 +82,13 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
   return app;
 }
 
-// Single shared Keepa client. It's stateless aside from config; per-request
-// construction would only thrash the env() cache.
+// Shared singletons. Keepa is stateless aside from config; per-request
+// construction would only thrash the env() cache. The affiliate rewriter
+// holds the resolved env-derived tag set so a flip of AMAZON_ASSOCIATES_TAG
+// (or future tags) requires a process restart — that's intentional, we
+// don't want a partial deploy emitting half-tagged links.
 const keepaClient = new KeepaClient();
+const affiliateRewriter = createAffiliateRewriter();
 
 async function deriveMcpContext(c: Context): Promise<McpContext> {
   const principal = c.get('principal') as AuthPrincipal | undefined;
@@ -88,6 +98,7 @@ async function deriveMcpContext(c: Context): Promise<McpContext> {
     ...(principal?.orgId !== undefined ? { orgId: principal.orgId } : {}),
     scopes: principal?.scopes ?? ['deals:read'],
     keepa: keepaClient,
+    affiliate: affiliateRewriter,
   };
 }
 

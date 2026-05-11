@@ -1,0 +1,17 @@
+[
+  { "label": "amazon headphones", "args": { "merchant": "amazon", "query": "headphones" } },
+  { "label": "amazon coffee", "args": { "merchant": "amazon", "query": "coffee" } },
+  { "label": "amazon shoes", "args": { "merchant": "amazon", "query": "shoes" } },
+  { "label": "best-buy any", "args": { "merchant": "best-buy" } },
+  { "label": "walmart any", "args": { "merchant": "walmart" } },
+  { "label": "the-home-depot any", "args": { "merchant": "the-home-depot" } },
+  { "label": "target any", "args": { "merchant": "target" } },
+  { "label": "costco any", "args": { "merchant": "costco-wholesale" } },
+  { "label": "all-recent", "args": { "limit": 20 } },
+  { "label": "us-only", "args": { "country": "US", "limit": 10 } },
+  { "label": "cart-50", "args": { "cartTotalCents": 5000, "limit": 10 } },
+  { "label": "query-only", "args": { "query": "free shipping" } },
+  { "label": "query-discount", "args": { "query": "$10 off" } },
+  { "label": "query-percent", "args": { "query": "20% off" } },
+  { "label": "merchant-nike", "args": { "merchant": "nike" } }
+]

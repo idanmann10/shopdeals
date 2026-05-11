@@ -162,7 +162,12 @@ export async function handler(
     };
     if (r.code != null) item.code = r.code;
     if (r.description != null) item.description = r.description;
-    if (r.deeplink != null) item.deeplink = r.deeplink;
+    if (r.deeplink != null) {
+      // Pass the deeplink through the affiliate rewriter if one is wired.
+      // The rewriter is a no-op when no tags are configured, so this is
+      // safe in tests and dev (and is unchanged for non-Amazon URLs).
+      item.deeplink = ctx.affiliate ? ctx.affiliate.rewrite(r.deeplink).url : r.deeplink;
+    }
     if (r.attributionSource != null) item.attributionSource = r.attributionSource;
     if (r.lastSeenWorkingAt != null) item.lastSeenWorkingAt = r.lastSeenWorkingAt.toISOString();
     if (r.successRate != null) item.successRate = r.successRate;
