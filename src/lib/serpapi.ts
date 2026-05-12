@@ -150,6 +150,46 @@ export interface SerpApiOptions {
   fetchImpl?: typeof fetch;
   baseUrl?: string;
   timeoutMs?: number;
+  /**
+   * Cache size for `search` + `productOffers` (per-method LRU). Repeat
+   * queries within `cacheTtlMs` skip the network and the SerpApi credit
+   * entirely. Set to 0 to disable.
+   */
+  cacheSize?: number;
+  /** Cache TTL in milliseconds. Default: 5 minutes. */
+  cacheTtlMs?: number;
+}
+
+/** Tiny dependency-free LRU with TTL. Stores Promises so concurrent calls coalesce. */
+class LruCache<V> {
+  private readonly map = new Map<string, { value: V; expiresAt: number }>();
+  constructor(private readonly maxSize: number, private readonly ttlMs: number) {}
+
+  get(key: string): V | undefined {
+    const hit = this.map.get(key);
+    if (!hit) return undefined;
+    if (hit.expiresAt < Date.now()) {
+      this.map.delete(key);
+      return undefined;
+    }
+    // Mark as recently used by reinserting.
+    this.map.delete(key);
+    this.map.set(key, hit);
+    return hit.value;
+  }
+
+  set(key: string, value: V): void {
+    if (this.maxSize <= 0) return;
+    if (this.map.size >= this.maxSize) {
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined) this.map.delete(oldest);
+    }
+    this.map.set(key, { value, expiresAt: Date.now() + this.ttlMs });
+  }
+
+  delete(key: string): void {
+    this.map.delete(key);
+  }
 }
 
 export interface SearchInput {
@@ -165,6 +205,8 @@ export class SerpApiClient {
   private readonly fetchImpl: typeof fetch;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly searchCache: LruCache<Promise<ShoppingResult[]>>;
+  private readonly offerCache: LruCache<Promise<SellerOffer[]>>;
 
   constructor(opts: SerpApiOptions = {}) {
     const e = (() => {
@@ -178,6 +220,10 @@ export class SerpApiClient {
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.baseUrl = (opts.baseUrl ?? 'https://serpapi.com').replace(/\/+$/, '');
     this.timeoutMs = opts.timeoutMs ?? 15_000;
+    const cacheSize = opts.cacheSize ?? 256;
+    const ttl = opts.cacheTtlMs ?? 5 * 60 * 1000;
+    this.searchCache = new LruCache(cacheSize, ttl);
+    this.offerCache = new LruCache(cacheSize, ttl);
   }
 
   isConfigured(): boolean {
@@ -193,6 +239,27 @@ export class SerpApiClient {
     const limit = Math.max(1, Math.min(100, input.limit ?? 20));
     const country = (input.country ?? 'us').toLowerCase();
 
+    // Cache key: include the public-facing inputs but NOT the api key.
+    // Storing the Promise means a second caller for the same key while
+    // the first is still inflight piggybacks on the same network call.
+    const key = `q=${query.toLowerCase()}|gl=${country}|num=${limit}`;
+    const hit = this.searchCache.get(key);
+    if (hit) return hit;
+
+    const promise = this.doSearch(query, country, limit);
+    this.searchCache.set(key, promise);
+    // Evict on failure so the next caller retries instead of inheriting the
+    // failed cached promise. Attach a `.catch` that re-throws but ALSO
+    // swallows the rejection here so Node doesn't flag it as unhandled —
+    // the original `promise` reference handed back to the caller still
+    // rejects normally.
+    promise.catch(() => {
+      this.searchCache.delete(key);
+    });
+    return promise;
+  }
+
+  private async doSearch(query: string, country: string, limit: number): Promise<ShoppingResult[]> {
     const params = new URLSearchParams({
       engine: 'google_shopping',
       q: query,
@@ -201,10 +268,8 @@ export class SerpApiClient {
       num: String(limit),
     });
     const body = await this.fetchJson(`${this.baseUrl}/search?${params.toString()}`);
-
     const parsed = ResponseSchema.parse(body);
     if (parsed.error) throw new Error(`SerpApi error: ${parsed.error}`);
-
     const results = parsed.shopping_results ?? [];
     return results
       .slice(0, limit)
@@ -226,6 +291,18 @@ export class SerpApiClient {
     }
     if (!immersiveToken) return [];
 
+    const hit = this.offerCache.get(immersiveToken);
+    if (hit) return hit;
+
+    const promise = this.doProductOffers(immersiveToken);
+    this.offerCache.set(immersiveToken, promise);
+    promise.catch(() => {
+      this.offerCache.delete(immersiveToken);
+    });
+    return promise;
+  }
+
+  private async doProductOffers(immersiveToken: string): Promise<SellerOffer[]> {
     const params = new URLSearchParams({
       engine: 'google_immersive_product',
       page_token: immersiveToken,
@@ -234,7 +311,6 @@ export class SerpApiClient {
     const body = await this.fetchJson(`${this.baseUrl}/search.json?${params.toString()}`);
     const parsed = ImmersiveProductSchema.parse(body);
     if (parsed.error) throw new Error(`SerpApi error: ${parsed.error}`);
-
     const stores = parsed.product_results?.stores ?? [];
     return stores.map((s) => normalizeOffer(s)).filter((o): o is SellerOffer => o !== null);
   }
