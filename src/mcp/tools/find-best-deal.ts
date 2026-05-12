@@ -32,6 +32,7 @@ import { SerpApiClient, type SellerOffer } from '../../lib/serpapi.ts';
 import { extractAmazonAsin } from '../../lib/affiliate.ts';
 import { KeepaClient } from '../../sources/keepa.ts';
 import { log } from '../../lib/log.ts';
+import { serpApiRateLimiter } from '../../lib/rate-limit.ts';
 
 export const name = 'find_best_deal';
 
@@ -106,6 +107,10 @@ export async function handler(
   if (!ctx.scopes.includes('deals:read')) {
     throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
   }
+
+  // Rate limit: each call burns up to 2 SerpApi credits. Without this a
+  // looping agent could torch our monthly budget in minutes.
+  serpApiRateLimiter.consumeOrThrow(ctx.clientHash, 'find_best_deal');
 
   const t0 = performance.now();
   const meta = { serpapiCalls: 0, keepaCalls: 0, couponsMatched: 0, durationMs: 0 };

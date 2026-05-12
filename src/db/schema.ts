@@ -231,6 +231,52 @@ export const waitlist = pgTable(
   })
 );
 
+/**
+ * `price_watches` — a user (or agent on the user's behalf) asked us to ping
+ * them when a product hits a target price. Persisted forever; a future cron
+ * worker walks them and emails the contact when any check returns
+ * `current <= targetCents`.
+ *
+ * The watch can be keyed by either a query (free-text "AirPods Pro") or a
+ * specific merchant URL. Most watches are query-based since users describe
+ * intent, not URLs.
+ */
+export const priceWatches = pgTable(
+  'price_watches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Stable hash of the calling agent so we can rate-limit + dedupe. */
+    clientHash: varchar('client_hash', { length: 64 }).notNull(),
+    /** Free-text product query (e.g. "Sony WH-1000XM5"). At least one of
+     * `query` or `productUrl` must be set. */
+    query: text('query'),
+    /** Specific merchant product URL when the watch is for one offer. */
+    productUrl: text('product_url'),
+    /** Target price in cents. We notify when observed total <= this. */
+    targetPriceCents: integer('target_price_cents').notNull(),
+    /** Optional country scope for the watch. */
+    countryCode: varchar('country_code', { length: 2 }),
+    /** Where to deliver the notification — for v1 only email is supported. */
+    notifyEmail: varchar('notify_email', { length: 320 }),
+    notifyWebhook: text('notify_webhook'),
+    /** UTC timestamp of the last check the cron made. */
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
+    /** Cents observed on the last check (helpful for "we're close" UX). */
+    lastObservedCents: integer('last_observed_cents'),
+    /** Cents observed on the last check that actually triggered notify. */
+    triggeredAt: timestamp('triggered_at', { withTimezone: true }),
+    triggeredCents: integer('triggered_cents'),
+    /** Soft-delete instead of hard delete so we can show users their history. */
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    clientActiveIdx: index('price_watches_client_active_idx').on(t.clientHash, t.isActive),
+    activeCheckedIdx: index('price_watches_active_checked_idx').on(t.isActive, t.lastCheckedAt),
+  })
+);
+
 // ---------- Types ----------
 
 export type Merchant = typeof merchants.$inferSelect;
@@ -247,6 +293,8 @@ export type IngestRun = typeof ingestRuns.$inferSelect;
 export type NewIngestRun = typeof ingestRuns.$inferInsert;
 export type WaitlistEntry = typeof waitlist.$inferSelect;
 export type NewWaitlistEntry = typeof waitlist.$inferInsert;
+export type PriceWatch = typeof priceWatches.$inferSelect;
+export type NewPriceWatch = typeof priceWatches.$inferInsert;
 
 // Composite primary key not used; left here for future dedup_pairs etc.
 export const _exports = { primaryKey };

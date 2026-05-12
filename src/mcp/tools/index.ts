@@ -15,6 +15,7 @@ import * as listMerchants from './list-merchants.ts';
 import * as getPriceHistory from './get-price-history.ts';
 import * as redeemLink from './redeem-link.ts';
 import * as reportCodeResult from './report-code-result.ts';
+import * as watchPrice from './watch-price.ts';
 import type { z } from 'zod';
 import type { McpContext } from '../context.ts';
 
@@ -38,6 +39,7 @@ export const tools: ReadonlyArray<ToolModule<never, Record<string, unknown>>> = 
   getPriceHistory as unknown as ToolModule<never, Record<string, unknown>>,
   redeemLink as unknown as ToolModule<never, Record<string, unknown>>,
   reportCodeResult as unknown as ToolModule<never, Record<string, unknown>>,
+  watchPrice as unknown as ToolModule<never, Record<string, unknown>>,
 ];
 
 export const toolByName: Readonly<Record<string, ToolModule<never, Record<string, unknown>>>> =
@@ -53,4 +55,5 @@ export {
   getPriceHistory,
   redeemLink,
   reportCodeResult,
+  watchPrice,
 };

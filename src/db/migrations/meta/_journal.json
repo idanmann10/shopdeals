@@ -15,6 +15,13 @@
       "when": 1762992000000,
       "tag": "0001_add_waitlist",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778553600000,
+      "tag": "0002_price_watches",
+      "breakpoints": true
     }
   ]
 }

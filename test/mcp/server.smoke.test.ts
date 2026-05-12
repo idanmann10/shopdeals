@@ -67,6 +67,7 @@ describe('MCP server smoke test', () => {
         'list_merchants',
         'redeem_link',
         'report_code_result',
+        'watch_price',
       ].sort(),
     );
     for (const t of list.tools) {

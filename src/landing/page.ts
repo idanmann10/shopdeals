@@ -441,6 +441,14 @@ export function landingHtml(data: LandingData = {}): string {
   footer h4 { font-size: 14px; font-weight: 700; margin: 0 0 14px; color: var(--ink); }
   footer .links a { display: block; font-size: 13.5px; color: var(--ink-2); padding: 4px 0; }
   footer .links a:hover { color: var(--ink); }
+  footer .disclosure {
+    margin-top: 36px; padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--ink-3); line-height: 1.55;
+    max-width: 880px;
+  }
+  footer .disclosure p { margin: 0 0 10px; }
+  footer .disclosure strong { color: var(--ink-2); }
   footer .col-brand { display: flex; flex-direction: column; gap: 6px; }
   footer .col-brand .tag { color: var(--ink-3); font-size: 13px; }
   footer .live-pill {
@@ -686,36 +694,42 @@ export function landingHtml(data: LandingData = {}): string {
 </section>
 
 <footer>
-  <div class="container row">
-    <div class="col-brand">
-      <a class="logo" href="/">
-        <span class="logo-mark"></span>
-        shopdeals
-      </a>
-      <span class="tag">Your AI shopping agent.</span>
-      <span class="live-pill"><span class="dot"></span>${ingestStatus} · ${dealCount} deals</span>
-    </div>
-    <div>
-      <h4>Product</h4>
-      <div class="links">
-        <a href="#how">How it works</a>
-        <a href="#trust">Safety</a>
-        <a href="#install">Install</a>
+  <div class="container">
+    <div class="row">
+      <div class="col-brand">
+        <a class="logo" href="/">
+          <span class="logo-mark"></span>
+          shopdeals
+        </a>
+        <span class="tag">Your AI shopping agent.</span>
+        <span class="live-pill"><span class="dot"></span>${ingestStatus} · ${dealCount} deals</span>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <div class="links">
+          <a href="#how">How it works</a>
+          <a href="#trust">Safety</a>
+          <a href="#install">Install</a>
+        </div>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <div class="links">
+          <a href="https://github.com/idanmann10/snap-ai">GitHub</a>
+          <a href="mailto:hello@shopdeals.sh">Contact</a>
+        </div>
+      </div>
+      <div>
+        <h4>Developers</h4>
+        <div class="links">
+          <a href="/api">API</a>
+          <a href="/healthz">Status</a>
+        </div>
       </div>
     </div>
-    <div>
-      <h4>Company</h4>
-      <div class="links">
-        <a href="https://github.com/idanmann10/snap-ai">GitHub</a>
-        <a href="mailto:hello@shopdeals.sh">Contact</a>
-      </div>
-    </div>
-    <div>
-      <h4>Developers</h4>
-      <div class="links">
-        <a href="/api">API</a>
-        <a href="/healthz">Status</a>
-      </div>
+    <div class="disclosure">
+      <p><strong>Affiliate disclosure:</strong> shopdeals is a participant in the Amazon Services LLC Associates Program and Skimlinks. Many of the buy links we hand your AI are affiliate links — when you purchase through them, we earn a small commission at no extra cost to you. We never strip an existing creator or community attribution from a URL; we add ours only when none is present.</p>
+      <p><strong>Privacy:</strong> the MCP server doesn't store your queries, your identity, or anything you buy. The only data we keep is anonymized aggregate counts (how many times a deal was returned, how often agents reported a code worked) so we can rank better deals over time.</p>
     </div>
   </div>
 </footer>
