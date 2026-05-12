@@ -61,9 +61,11 @@ describe('MCP server smoke test', () => {
         'find_best_deal',
         'find_deals',
         'find_products',
+        'get_code_for_url',
         'get_deal',
         'get_price_history',
         'list_merchants',
+        'redeem_link',
         'report_code_result',
       ].sort(),
     );

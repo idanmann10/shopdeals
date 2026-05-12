@@ -9,9 +9,11 @@
 import * as findBestDeal from './find-best-deal.ts';
 import * as findDeals from './find-deals.ts';
 import * as findProducts from './find-products.ts';
+import * as getCodeForUrl from './get-code-for-url.ts';
 import * as getDeal from './get-deal.ts';
 import * as listMerchants from './list-merchants.ts';
 import * as getPriceHistory from './get-price-history.ts';
+import * as redeemLink from './redeem-link.ts';
 import * as reportCodeResult from './report-code-result.ts';
 import type { z } from 'zod';
 import type { McpContext } from '../context.ts';
@@ -30,13 +32,25 @@ export const tools: ReadonlyArray<ToolModule<never, Record<string, unknown>>> = 
   findBestDeal as unknown as ToolModule<never, Record<string, unknown>>,
   findDeals as unknown as ToolModule<never, Record<string, unknown>>,
   findProducts as unknown as ToolModule<never, Record<string, unknown>>,
+  getCodeForUrl as unknown as ToolModule<never, Record<string, unknown>>,
   getDeal as unknown as ToolModule<never, Record<string, unknown>>,
   listMerchants as unknown as ToolModule<never, Record<string, unknown>>,
   getPriceHistory as unknown as ToolModule<never, Record<string, unknown>>,
+  redeemLink as unknown as ToolModule<never, Record<string, unknown>>,
   reportCodeResult as unknown as ToolModule<never, Record<string, unknown>>,
 ];
 
 export const toolByName: Readonly<Record<string, ToolModule<never, Record<string, unknown>>>> =
   Object.fromEntries(tools.map((t) => [t.name, t]));
 
-export { findBestDeal, findDeals, findProducts, getDeal, listMerchants, getPriceHistory, reportCodeResult };
+export {
+  findBestDeal,
+  findDeals,
+  findProducts,
+  getCodeForUrl,
+  getDeal,
+  listMerchants,
+  getPriceHistory,
+  redeemLink,
+  reportCodeResult,
+};
