@@ -35,24 +35,27 @@ export function landingHtml(data: LandingData = {}): string {
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" />
 <style>
   :root {
-    --bg: #ffffff;
-    --bg-soft: #f7f6fb;
+    /* Warmer commerce palette: deep amber/orange brand (think Honey,
+       Amazon's pricing UI, Capital One Shopping) over a soft cream
+       neutral. The previous purple was clean but read as "AI startup"
+       not "shop the deals." Orange is the universal commerce signal. */
+    --bg: #fffdf9;             /* near-white with a faint warm tint */
+    --bg-soft: #f7f3ea;        /* warm cream for section bands */
     --bg-card: #ffffff;
-    --bg-card-soft: #fafaff;
-    --ink: #0f0d1f;
-    --ink-2: #5b5871;
-    --ink-3: #9794ab;
-    --line: #e9e7f0;
-    --line-soft: #f1eff6;
-    --brand: #5a4fcf;
-    --brand-2: #7d6ff0;
-    --brand-soft: #ede9fc;
-    --brand-soft-2: #f4f1ff;
-    --green: #1f9d6b;
-    --green-soft: #e3f5ec;
-    --warm: #ff7a59;
-    --warm-soft: #ffe8e1;
-    --radius: 18px;
+    --ink: #15131a;            /* near-black, warm-leaning */
+    --ink-2: #56535e;
+    --ink-3: #8c8893;
+    --line: #ede8dc;
+    --line-soft: #f5f0e6;
+    --brand: #f26b3a;          /* deep amber-orange — the commerce signal */
+    --brand-2: #ff8757;        /* lighter for gradients / hover */
+    --brand-soft: #fdeee5;     /* warm tint for badges + soft hover bg */
+    --brand-soft-2: #fff7f1;
+    --green: #0e8a5f;          /* success green for "best deal" badges */
+    --green-soft: #e2f3ec;
+    --warm: #f26b3a;
+    --warm-soft: #fdeee5;
+    --radius: 16px;
     --radius-sm: 10px;
   }
   *, *::before, *::after { box-sizing: border-box; }
@@ -77,19 +80,15 @@ export function landingHtml(data: LandingData = {}): string {
     font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
     color: var(--ink);
   }
+  /* Logo mark: an inline SVG price-tag. Universally legible as "deal"
+     across cultures and screen sizes. Filled with the brand color, with
+     a subtle highlight via a brand-2 gradient stop. */
   .logo-mark {
-    width: 30px; height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
-    position: relative; flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(90,79,207,0.30), inset 0 1px 0 rgba(255,255,255,0.18);
+    width: 32px; height: 32px;
+    flex-shrink: 0;
+    display: inline-grid; place-items: center;
   }
-  .logo-mark::after {
-    content: '';
-    position: absolute; inset: 6px;
-    border-radius: 5px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.45), transparent 55%);
-  }
+  .logo-mark svg { width: 100%; height: 100%; }
   .nav { display: flex; gap: 32px; font-size: 14.5px; align-items: center; }
   .nav a { color: var(--ink-2); font-weight: 500; }
   .nav a:hover { color: var(--ink); }
@@ -97,10 +96,10 @@ export function landingHtml(data: LandingData = {}): string {
     padding: 10px 20px;
     background: var(--brand); color: white;
     border-radius: 999px; font-weight: 600;
-    box-shadow: 0 2px 0 rgba(90,79,207,0.15), 0 8px 24px rgba(90,79,207,0.20);
+    box-shadow: 0 2px 0 rgba(242,107,58,0.15), 0 8px 24px rgba(242,107,58,0.20);
     transition: transform .12s, box-shadow .12s;
   }
-  .nav-cta:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(90,79,207,0.18), 0 12px 28px rgba(90,79,207,0.28); }
+  .nav-cta:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(242,107,58,0.18), 0 12px 28px rgba(242,107,58,0.28); }
 
   /* ---------- Hero ---------- */
   .hero { padding: 64px 0 80px; position: relative; overflow: hidden; }
@@ -109,7 +108,7 @@ export function landingHtml(data: LandingData = {}): string {
     position: absolute;
     bottom: -200px; left: -260px;
     width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(125,111,240,0.16) 0%, transparent 65%);
+    background: radial-gradient(circle, rgba(255,135,87,0.16) 0%, transparent 65%);
     pointer-events: none; z-index: 0;
   }
   .hero-grid {
@@ -143,9 +142,9 @@ export function landingHtml(data: LandingData = {}): string {
   }
   .btn-primary {
     background: var(--brand); color: white; border: 1px solid var(--brand);
-    box-shadow: 0 2px 0 rgba(90,79,207,0.18), 0 10px 24px rgba(90,79,207,0.22);
+    box-shadow: 0 2px 0 rgba(242,107,58,0.18), 0 10px 24px rgba(242,107,58,0.22);
   }
-  .btn-primary:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(90,79,207,0.18), 0 14px 30px rgba(90,79,207,0.30); }
+  .btn-primary:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(242,107,58,0.18), 0 14px 30px rgba(242,107,58,0.30); }
   .btn-ghost {
     background: white; color: var(--brand); border: 1px solid var(--brand-soft);
   }
@@ -158,7 +157,7 @@ export function landingHtml(data: LandingData = {}): string {
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 26px;
-    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 30px 80px rgba(90,79,207,0.13);
+    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 30px 80px rgba(242,107,58,0.13);
   }
   .demo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
   .demo-head .logo-mark { width: 26px; height: 26px; }
@@ -179,7 +178,7 @@ export function landingHtml(data: LandingData = {}): string {
     display: inline-grid; place-items: center;
     width: 34px; height: 34px; border-radius: 8px;
     background: var(--brand); color: white;
-    box-shadow: 0 2px 0 rgba(90,79,207,0.20);
+    box-shadow: 0 2px 0 rgba(242,107,58,0.20);
   }
   .demo-input .send svg { width: 14px; height: 14px; }
 
@@ -254,7 +253,7 @@ export function landingHtml(data: LandingData = {}): string {
     border: none; border-radius: 12px;
     font-family: inherit; font-size: 14.5px; font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 0 rgba(90,79,207,0.20), 0 12px 28px rgba(90,79,207,0.20);
+    box-shadow: 0 2px 0 rgba(242,107,58,0.20), 0 12px 28px rgba(242,107,58,0.20);
     transition: transform .12s, box-shadow .12s;
   }
   .approve:hover { transform: translateY(-1px); }
@@ -305,7 +304,7 @@ export function landingHtml(data: LandingData = {}): string {
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: 26px;
-    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 16px 40px rgba(90,79,207,0.08);
+    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 16px 40px rgba(242,107,58,0.08);
   }
   .chat-card .head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-weight: 600; font-size: 15px; }
   .chat-card .head .logo-mark { width: 26px; height: 26px; }
@@ -370,16 +369,20 @@ export function landingHtml(data: LandingData = {}): string {
   .install-card:hover {
     border-color: var(--brand);
     transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(90,79,207,0.12);
+    box-shadow: 0 12px 28px rgba(242,107,58,0.12);
   }
   .install-card .ico {
     width: 48px; height: 48px; border-radius: 12px;
     display: inline-grid; place-items: center;
     color: white; flex-shrink: 0;
   }
-  .ico-claude { background: linear-gradient(135deg, #ff7a59 0%, #ff9d80 100%); }
+  /* Install-card icons: each platform gets its own canonical brand color
+     (Anthropic peach, OpenAI green, Cursor charcoal). These DON'T need to
+     match our orange brand — they're product identifiers, and using the
+     real product palette makes the cards instantly recognizable. */
+  .ico-claude { background: linear-gradient(135deg, #d97757 0%, #e89178 100%); }
   .ico-chatgpt { background: linear-gradient(135deg, #10a37f 0%, #19c69b 100%); }
-  .ico-cursor { background: linear-gradient(135deg, #0f0d1f 0%, #2d2a4a 100%); }
+  .ico-cursor { background: linear-gradient(135deg, #15131a 0%, #2e2a36 100%); }
   .install-card .text {
     flex: 1; display: flex; flex-direction: column; gap: 2px;
   }
@@ -404,7 +407,7 @@ export function landingHtml(data: LandingData = {}): string {
     content: '';
     position: absolute; top: -120px; right: -120px;
     width: 360px; height: 360px;
-    background: radial-gradient(circle, rgba(125,111,240,0.30) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255,135,87,0.30) 0%, transparent 70%);
   }
   .waitlist h3 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
   .waitlist p { color: rgba(255,255,255,0.7); margin: 0 0 24px; max-width: 540px; }
@@ -473,7 +476,7 @@ export function landingHtml(data: LandingData = {}): string {
 <header>
   <div class="container row">
     <a class="logo" href="/">
-      <span class="logo-mark"></span>
+      <span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>
       shopdeals
     </a>
     <nav class="nav">
@@ -499,7 +502,7 @@ export function landingHtml(data: LandingData = {}): string {
 
       <div class="demo-card" aria-hidden="true">
         <div class="demo-head">
-          <span class="logo-mark"></span>
+          <span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>
           <span class="name">shopdeals</span>
         </div>
         <div class="demo-input">
@@ -575,7 +578,7 @@ export function landingHtml(data: LandingData = {}): string {
   <div class="container">
     <div class="feature-block">
       <div class="chat-card">
-        <div class="head"><span class="logo-mark"></span>shopdeals</div>
+        <div class="head"><span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>shopdeals</div>
         <div class="chat-bubble user">Find me a deal on AirPods Pro</div>
         <div class="chat-bubble ai">
           On it! Comparing ${merchantCount} sellers and our coupon catalog now.
@@ -698,7 +701,7 @@ export function landingHtml(data: LandingData = {}): string {
     <div class="row">
       <div class="col-brand">
         <a class="logo" href="/">
-          <span class="logo-mark"></span>
+          <span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>
           shopdeals
         </a>
         <span class="tag">Your AI shopping agent.</span>

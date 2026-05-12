@@ -125,13 +125,16 @@ export async function handler(
     }, t0);
   }
 
-  // Step 1: one search to find the top product candidate.
+  // Step 1: one search to find candidate products. Ask for 8 — Google's
+  // ranking puts what it considers most relevant first, but for "shop
+  // anything" queries the absolute cheapest is often the 3rd or 4th
+  // result (different brand, similar specs).
   let shoppingResults;
   try {
     shoppingResults = await serpapi.search({
       query: input.query,
       ...(input.country ? { country: input.country } : {}),
-      limit: 3,
+      limit: 8,
     });
     meta.serpapiCalls += 1;
   } catch (err) {
@@ -147,27 +150,72 @@ export async function handler(
     }, t0);
   }
 
-  // Find the first result that has an immersive token (the entry point to
-  // real merchant URLs). If none, fall back to the raw shopping results.
-  const candidate = shoppingResults.find((r) => r.immersiveToken) ?? shoppingResults[0];
-  if (!candidate) {
+  if (shoppingResults.length === 0) {
     return finalize({ query: input.query, alternatives: [], meta }, t0);
   }
 
-  let offers: SellerOffer[] = [];
-  if (candidate.immersiveToken) {
-    meta.serpapiCalls += 1;
-    try {
-      offers = await serpapi.productOffers(candidate.immersiveToken);
-    } catch (err) {
-      log.warn(
-        { err: err instanceof Error ? err.message : String(err) },
-        'find_best_deal: immersive product call failed, falling back to shopping-result level',
-      );
-    }
-  }
+  // Step 2: shortlist the top candidates by SerpApi's reported price
+  // (free — uses data we already have). Then fan out immersive lookups
+  // in parallel to get per-seller real merchant URLs + total prices.
+  //
+  // We evaluate up to MAX_CANDIDATES products. Each immersive call is
+  // one SerpApi credit, so total cost = 1 (search) + N (immersives)
+  // credits per query. The cache makes repeats free.
+  const MAX_CANDIDATES = 3;
+  const withTokens = shoppingResults.filter((r) => r.immersiveToken);
+  const candidates = withTokens
+    .slice() // don't mutate the search-result cache
+    .sort((a, b) => {
+      const av = a.priceCents ?? Number.POSITIVE_INFINITY;
+      const bv = b.priceCents ?? Number.POSITIVE_INFINITY;
+      return av - bv;
+    })
+    .slice(0, MAX_CANDIDATES);
+  const productTitle = candidates[0]?.title ?? shoppingResults[0]?.title;
 
-  // If immersive didn't yield offers, synthesize one from the shopping result.
+  // Per-candidate timeout: race each immersive call against a 5s deadline.
+  // A slow candidate returns empty (and its promise still resolves in the
+  // background, warming the cache for next time) — we never block the
+  // whole query waiting for a straggler. The cheapest candidate that DID
+  // respond wins, even if others are still pending.
+  const IMMERSIVE_DEADLINE_MS = 5000;
+  const immersiveResults = await Promise.all(
+    candidates.map((c) => {
+      meta.serpapiCalls += 1;
+      const real = serpapi
+        .productOffers(c.immersiveToken!)
+        .then((sellers) => ({ candidate: c, sellers }))
+        .catch((err) => {
+          log.warn(
+            { err: err instanceof Error ? err.message : String(err), product: c.title },
+            'find_best_deal: immersive lookup failed for one candidate (non-fatal)',
+          );
+          return { candidate: c, sellers: [] as SellerOffer[] };
+        });
+      const timeout = new Promise<{ candidate: typeof c; sellers: SellerOffer[] }>((resolve) => {
+        setTimeout(() => {
+          log.debug({ product: c.title }, 'find_best_deal: per-candidate deadline hit');
+          resolve({ candidate: c, sellers: [] });
+        }, IMMERSIVE_DEADLINE_MS);
+      });
+      return Promise.race([real, timeout]);
+    }),
+  );
+
+  // Flatten: every (product, seller) combination becomes one offer in the
+  // ranking pool. We carry the product title alongside the offer so the
+  // returned best/alternatives can show "this is the cheapest version OF
+  // any product we evaluated", not just "the cheapest seller of the first
+  // result Google ranked."
+  let offers: SellerOffer[] = immersiveResults.flatMap((r) =>
+    r.sellers.map((s) => ({
+      ...s,
+      // Annotate with the product title if the seller's own title is empty.
+      ...(s.title ? {} : { title: r.candidate.title }),
+    })),
+  );
+
+  // Fallback: if every immersive call failed, synthesize from shopping_results.
   if (offers.length === 0) {
     offers = shoppingResults
       .filter((r) => r.link && r.priceCents !== undefined)
@@ -178,6 +226,7 @@ export async function handler(
           link: r.link,
           flags: r.delivery ? [r.delivery] : [],
         };
+        if (r.title) o.title = r.title;
         if (r.priceCents !== undefined) {
           o.priceCents = r.priceCents;
           o.totalCents = r.priceCents;
@@ -257,7 +306,12 @@ export async function handler(
     alternatives,
     meta,
   };
-  if (candidate.title) result.productTitle = candidate.title;
+  // Use the best-ranked offer's title (or the cheapest candidate's title)
+  // as the canonical productTitle. With multi-candidate ranking, "the
+  // product" might differ from "the first Google result" — surface the
+  // winning product.
+  const winningTitle = best?.title ?? productTitle;
+  if (winningTitle) result.productTitle = winningTitle;
   if (best) result.best = best;
   return finalize(result, t0);
 }
