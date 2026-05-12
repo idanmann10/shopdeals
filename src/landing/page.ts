@@ -211,20 +211,29 @@ export function landingHtml(data: LandingData = {}): string {
     font-size: 13.5px;
   }
   .seller-table .header {
-    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr;
     padding: 12px 16px;
     background: var(--bg-soft);
     border-bottom: 1px solid var(--line);
     font-weight: 600; color: var(--ink-2); font-size: 12.5px;
   }
   .seller-table .row {
-    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr;
     padding: 14px 16px;
     border-top: 1px solid var(--line-soft);
     align-items: center;
   }
   .seller-table .row:first-of-type { border-top: none; }
-  .seller-table .row .seller-name { font-weight: 600; }
+  .seller-table .row .seller-name {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600;
+  }
+  .seller-table .row .seller-name img {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: white; padding: 1px; box-shadow: 0 0 0 1px var(--line);
+    flex-shrink: 0; object-fit: contain;
+  }
+  .seller-table .row .seller-name-text { display: flex; flex-direction: column; min-width: 0; }
   .seller-table .row.best {
     background: var(--brand-soft-2);
     color: var(--brand);
@@ -233,7 +242,7 @@ export function landingHtml(data: LandingData = {}): string {
   .seller-table .row.best .seller-name { color: var(--brand); }
   .seller-table .row.best .badge {
     font-size: 11px; font-weight: 500; color: var(--brand);
-    display: block; margin-top: 2px;
+    margin-top: 1px;
   }
 
   .approve {
@@ -517,19 +526,28 @@ export function landingHtml(data: LandingData = {}): string {
             <div>Seller</div><div>Total</div><div>Code</div><div>Shipping</div>
           </div>
           <div class="row">
-            <div class="seller-name">Best Buy</div>
+            <div class="seller-name">
+              <img src="https://www.google.com/s2/favicons?domain=bestbuy.com&sz=64" alt="" />
+              <span class="seller-name-text">Best Buy</span>
+            </div>
             <div>$199.99</div>
             <div>—</div>
             <div>Free</div>
           </div>
           <div class="row best">
-            <div class="seller-name">Amazon<span class="badge">Best overall deal</span></div>
+            <div class="seller-name">
+              <img src="https://www.google.com/s2/favicons?domain=amazon.com&sz=64" alt="" />
+              <span class="seller-name-text">Amazon<span class="badge">Best overall deal</span></span>
+            </div>
             <div>$179.99</div>
             <div>SAVE20</div>
             <div>Free Prime</div>
           </div>
           <div class="row">
-            <div class="seller-name">Costco</div>
+            <div class="seller-name">
+              <img src="https://www.google.com/s2/favicons?domain=costco.com&sz=64" alt="" />
+              <span class="seller-name-text">Costco</span>
+            </div>
             <div>$189.00</div>
             <div>—</div>
             <div>$4.99</div>
@@ -573,19 +591,28 @@ export function landingHtml(data: LandingData = {}): string {
           <div>Seller</div><div>Total</div><div>Code</div><div>Shipping</div>
         </div>
         <div class="row">
-          <div class="seller-name">Best Buy</div>
+          <div class="seller-name">
+            <img src="https://www.google.com/s2/favicons?domain=bestbuy.com&sz=64" alt="" />
+            <span class="seller-name-text">Best Buy</span>
+          </div>
           <div>$199.99</div>
           <div>—</div>
           <div>Free</div>
         </div>
         <div class="row best">
-          <div class="seller-name">Amazon<span class="badge">Best overall deal</span></div>
+          <div class="seller-name">
+            <img src="https://www.google.com/s2/favicons?domain=amazon.com&sz=64" alt="" />
+            <span class="seller-name-text">Amazon<span class="badge">Best overall deal</span></span>
+          </div>
           <div>$179.99</div>
           <div>SAVE20</div>
           <div>Free Prime</div>
         </div>
         <div class="row">
-          <div class="seller-name">Costco</div>
+          <div class="seller-name">
+            <img src="https://www.google.com/s2/favicons?domain=costco.com&sz=64" alt="" />
+            <span class="seller-name-text">Costco</span>
+          </div>
           <div>$189.00</div>
           <div>—</div>
           <div>$4.99</div>
@@ -610,7 +637,10 @@ export function landingHtml(data: LandingData = {}): string {
     <p class="lede">Start instantly from your favorite AI workspace.</p>
     <div class="install-grid">
       <a class="install-card" href="#" id="install-claude">
-        <span class="ico ico-claude"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a6 6 0 110 12 6 6 0 010-12z"/></svg></span>
+        <span class="ico ico-claude">
+          <!-- Claude / Anthropic mark -->
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
+        </span>
         <div class="text">
           <span class="label">Add to Claude</span>
           <span class="availability">Claude Desktop &amp; web — free</span>
@@ -618,15 +648,21 @@ export function landingHtml(data: LandingData = {}): string {
         <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
       </a>
       <a class="install-card" href="#" id="install-chatgpt">
-        <span class="ico ico-chatgpt"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.45a4 4 0 00-3.45-2A4 4 0 0015.56 9 4 4 0 0012 7a4 4 0 00-3.56 2A4 4 0 005.17 7.45a4 4 0 00-3.45 2 4 4 0 00.45 4.55l9.1 8.55a1 1 0 001.46 0l9.1-8.55a4 4 0 00.45-4.55z"/></svg></span>
+        <span class="ico ico-chatgpt">
+          <!-- OpenAI / ChatGPT mark -->
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M28.6 13.2a7.4 7.4 0 0 0-.7-6 7.4 7.4 0 0 0-8-3.6 7.4 7.4 0 0 0-5.6-2.5 7.4 7.4 0 0 0-7.1 5.1 7.4 7.4 0 0 0-4.9 3.6 7.4 7.4 0 0 0 .9 8.7 7.4 7.4 0 0 0 .7 6 7.4 7.4 0 0 0 8 3.6 7.4 7.4 0 0 0 5.6 2.5 7.4 7.4 0 0 0 7.1-5.1 7.4 7.4 0 0 0 4.9-3.6 7.4 7.4 0 0 0-.9-8.7zM17.3 28.4a5.5 5.5 0 0 1-3.5-1.3l.2-.1 5.8-3.4a1 1 0 0 0 .5-.8v-8.2l2.5 1.4v6.8a5.5 5.5 0 0 1-5.5 5.5zM5.4 23.3a5.5 5.5 0 0 1-.7-3.7l.2.1 5.8 3.4a1 1 0 0 0 1 0l7.1-4.1v2.9l-5.9 3.4a5.5 5.5 0 0 1-7.5-2zM3.9 11.1a5.5 5.5 0 0 1 2.9-2.4v6.9a1 1 0 0 0 .5.9l7 4-2.4 1.4-5.9-3.4a5.5 5.5 0 0 1-2-7.4zm20 4.6-7-4 2.4-1.4 5.9 3.4a5.5 5.5 0 0 1-.9 9.9v-6.9a1 1 0 0 0-.5-.9zm2.5-3.7-.2-.1-5.8-3.4a1 1 0 0 0-1 0l-7.1 4.1V9.7l5.9-3.4a5.5 5.5 0 0 1 8.2 5.7zM11.5 17l-2.5-1.4V8.7a5.5 5.5 0 0 1 9-4.2l-.2.1L12 8a1 1 0 0 0-.5.8V17zm1.3-2.9 3.2-1.8 3.2 1.8V18l-3.2 1.8-3.2-1.8z"/></svg>
+        </span>
         <div class="text">
-          <span class="label">Add to ChatGPT instantly</span>
+          <span class="label">Add to ChatGPT</span>
           <span class="availability">via Custom Connectors · Plus / Pro</span>
         </div>
         <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
       </a>
       <a class="install-card" href="#" id="install-cursor">
-        <span class="ico ico-cursor"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4l9 5 9-5v3l-9 5-9-5V4zm0 7l9 5 9-5v3l-9 5-9-5v-3z"/></svg></span>
+        <span class="ico ico-cursor">
+          <!-- Cursor mark (stylized C) -->
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 3 4 9.4v13.2L16 29l12-6.4V9.4L16 3zm0 2.3 9.6 5.1L16 15.6 6.4 10.4 16 5.3zm-10 7.5 9 4.8v9.8l-9-4.8v-9.8zm20 9.8-9 4.8v-9.8l9-4.8v9.8z"/></svg>
+        </span>
         <div class="text">
           <span class="label">Add to Cursor</span>
           <span class="availability">macOS · Windows · Linux</span>

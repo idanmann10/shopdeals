@@ -58,6 +58,7 @@ describe('MCP server smoke test', () => {
     const names = list.tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
+        'find_best_deal',
         'find_deals',
         'find_products',
         'get_deal',

@@ -221,8 +221,36 @@ async function fetchFeed(
 }
 
 /**
+ * Quality gate: drop rows that look like landing-page placeholders rather
+ * than real, actionable offers. CouponAPI returns a long tail of "Halloween
+ * Decorations Main LP" / "Nike logo black [NEW]" rows that have no code,
+ * no parseable discount, and no expiration — these poison search results
+ * and the find_best_deal ranker if we let them through.
+ *
+ * Rule: keep the row if ANY of:
+ *   - it has a `code` (a real coupon code makes it actionable)
+ *   - the parser can extract a numeric discount (% or $ value)
+ *   - the row has an explicit end_date (an actual offer with a deadline)
+ *   - the title obviously announces a savings amount ("save $", "off", "% off")
+ *
+ * Everything else is a landing-page slot we can't surface honestly.
+ */
+function isQualityRow(c: CouponApiCoupon, code: string, title: string): boolean {
+  if (code) return true;
+  if (c.end_date && c.end_date.trim().length > 0) return true;
+  const text = `${title} ${c.description ?? ''}`.toLowerCase();
+  if (/\b\d{1,3}\s*%\s*off\b/.test(text)) return true;
+  if (/\$\s*\d{1,4}(?:\.\d{1,2})?\s*off\b/.test(text)) return true;
+  if (/\bsave\s+(?:\$|up\s+to|\d)/.test(text)) return true;
+  if (/\bfree\s+(?:shipping|gift|trial)\b/.test(text)) return true;
+  if (/\bbuy\s+\d.*get\s+\d|bogo\b/.test(text)) return true;
+  return false;
+}
+
+/**
  * Map a CouponAPI offer to our canonical `RawDealInput`. Returns null when
- * the offer is missing the minimum we need or is marked suspended.
+ * the offer is missing the minimum we need, is marked suspended, or fails
+ * the quality gate above.
  */
 export function mapCoupon(c: CouponApiCoupon): RawDealInput | null {
   const offerId = String(c.offer_id ?? c.id ?? '').trim();
@@ -239,6 +267,8 @@ export function mapCoupon(c: CouponApiCoupon): RawDealInput | null {
   const code = (c.code ?? c.coupon_code ?? '').trim();
   const titleRaw = (c.title ?? c.description ?? '').trim();
   const title = titleRaw || `${storeName} offer`;
+
+  if (!isQualityRow(c, code, title)) return null;
 
   const parsed = parseDiscountFromText(`${title} ${c.description ?? ''}`);
 
