@@ -186,42 +186,28 @@ export async function handler(
     return finalize({ query: input.query, alternatives: [], meta }, t0);
   }
 
-  // Step 2: coupon cross-match.
+  // Steps 2 + 3 run in parallel — coupon cross-match (DB) and Keepa
+  // price-low signals (HTTP) don't depend on each other. Before this
+  // change they ran sequentially and cost ~200-400ms on cold Keepa hits.
   const slugs = Array.from(new Set(offers.map((o) => o.merchantSlug).filter((s) => s.length > 0)));
-  const codesBySlug = slugs.length > 0 ? await loadCodesForSlugs(ctx, slugs) : new Map();
-  meta.couponsMatched = Array.from(codesBySlug.values()).reduce((n, arr) => n + arr.length, 0);
-
-  // Step 3: Keepa price-low signals for any Amazon offer with an extractable ASIN.
   const keepa = ctx.keepa ?? new KeepaClient();
-  const priceSignalByLink = new Map<string, string>();
-  if (keepa.isConfigured()) {
-    const amazonOffers = offers.filter((o) => o.merchantSlug === 'amazon' || /amazon/i.test(o.merchantName));
-    // Cap Keepa calls — one per query is plenty, since Amazon offers tend to
-    // share the same ASIN.
-    const seenAsins = new Set<string>();
-    for (const o of amazonOffers.slice(0, 3)) {
-      const asin = extractAmazonAsin(o.link);
-      if (!asin || seenAsins.has(asin)) continue;
-      seenAsins.add(asin);
-      try {
-        const hist = await keepa.fetchPriceHistory({ asin });
-        meta.keepaCalls += 1;
-        const signal = priceSignalFromHistory(hist.points, o.priceCents ?? o.totalCents);
-        if (signal) {
-          for (const inner of amazonOffers) {
-            if (extractAmazonAsin(inner.link) === asin) {
-              priceSignalByLink.set(inner.link, signal);
-            }
-          }
-        }
-      } catch (err) {
-        log.debug(
-          { err: err instanceof Error ? err.message : String(err), asin },
-          'find_best_deal: Keepa lookup failed (non-fatal)',
-        );
-      }
-    }
-  }
+
+  const [codesBySlug, priceSignalByLink] = await Promise.all([
+    slugs.length > 0
+      ? loadCodesForSlugs(ctx, slugs)
+      : Promise.resolve(new Map<string, CodeMatch[]>()),
+    keepa.isConfigured()
+      ? fetchAmazonPriceSignals(keepa, offers, meta).catch((err) => {
+          log.debug(
+            { err: err instanceof Error ? err.message : String(err) },
+            'find_best_deal: Keepa parallel pass failed (non-fatal)',
+          );
+          return new Map<string, string>();
+        })
+      : Promise.resolve(new Map<string, string>()),
+  ]);
+
+  meta.couponsMatched = Array.from(codesBySlug.values()).reduce((n, arr) => n + arr.length, 0);
 
   // Step 4: build the per-option payload, compute effective total, sort.
   const ranked: BestDealOption[] = offers.map((o) => {
@@ -291,6 +277,63 @@ function applyDiscount(baseCents: number | undefined, discountCents: number | un
   const ratio = discountCents / baseCents;
   if (ratio > 0.6) return baseCents;
   return Math.max(0, baseCents - discountCents);
+}
+
+/**
+ * Fan out per-ASIN Keepa lookups in parallel for any Amazon offers.
+ * Returns a map keyed by offer.link → price-signal string (e.g. "30-day low").
+ * Cap at 3 distinct ASINs to bound credit spend.
+ */
+async function fetchAmazonPriceSignals(
+  keepa: KeepaClient,
+  offers: SellerOffer[],
+  meta: { keepaCalls: number },
+): Promise<Map<string, string>> {
+  const amazonOffers = offers.filter(
+    (o) => o.merchantSlug === 'amazon' || /amazon/i.test(o.merchantName),
+  );
+  if (amazonOffers.length === 0) return new Map();
+
+  // Distinct ASINs we need to look up.
+  const asinToOffers = new Map<string, SellerOffer[]>();
+  for (const o of amazonOffers) {
+    const asin = extractAmazonAsin(o.link);
+    if (!asin) continue;
+    const list = asinToOffers.get(asin) ?? [];
+    list.push(o);
+    asinToOffers.set(asin, list);
+  }
+  const asins = [...asinToOffers.keys()].slice(0, 3);
+  if (asins.length === 0) return new Map();
+
+  const results = await Promise.all(
+    asins.map(async (asin) => {
+      try {
+        const hist = await keepa.fetchPriceHistory({ asin });
+        meta.keepaCalls += 1;
+        const samples = asinToOffers.get(asin) ?? [];
+        // Use the first sample's price as the "current" benchmark.
+        const current = samples[0]?.priceCents ?? samples[0]?.totalCents;
+        const signal = priceSignalFromHistory(hist.points, current);
+        return { asin, signal };
+      } catch (err) {
+        log.debug(
+          { err: err instanceof Error ? err.message : String(err), asin },
+          'find_best_deal: Keepa lookup failed for ASIN (non-fatal)',
+        );
+        return { asin, signal: undefined as string | undefined };
+      }
+    }),
+  );
+
+  const out = new Map<string, string>();
+  for (const r of results) {
+    if (!r.signal) continue;
+    for (const o of asinToOffers.get(r.asin) ?? []) {
+      out.set(o.link, r.signal);
+    }
+  }
+  return out;
 }
 
 /**
