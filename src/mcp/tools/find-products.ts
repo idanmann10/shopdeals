@@ -27,6 +27,7 @@ import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
 import { SerpApiClient, type SellerOffer, type ShoppingResult } from '../../lib/serpapi.ts';
 import { log } from '../../lib/log.ts';
+import { serpApiRateLimiter } from '../../lib/rate-limit.ts';
 
 export const name = 'find_products';
 
@@ -75,6 +76,10 @@ export async function handler(
       note: 'live product search disabled (SERPAPI_KEY not set on this server)',
     };
   }
+
+  // Rate limit: each call can burn up to 4 SerpApi credits (1 search + up
+  // to 3 immersive). Without this a looping agent could blow the budget.
+  serpApiRateLimiter.consumeOrThrow(ctx.clientHash, 'find_products');
 
   // Step 1: search. Ask for a small set since each immersive follow-up is
   // its own SerpApi credit. 3 candidates is enough variety; we'll fan their
