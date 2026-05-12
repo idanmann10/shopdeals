@@ -42,6 +42,47 @@ const ShoppingResultSchema = z
     thumbnail: z.string().optional(),
     delivery: z.string().optional(),
     product_id: z.string().optional(),
+    // Token used by `google_immersive_product` to fetch the per-seller offer
+    // page. This is the path to real merchant URLs (the old google_product
+    // engine is dead — Google retired the service).
+    immersive_product_page_token: z.string().optional(),
+  })
+  .passthrough();
+
+const StoreOfferSchema = z
+  .object({
+    name: z.string(),
+    logo: z.string().optional(),
+    link: z.string(),
+    title: z.string().optional(),
+    price: z.string().optional(),
+    extracted_price: z.number().optional(),
+    original_price: z.string().optional(),
+    extracted_original_price: z.number().optional(),
+    shipping: z.string().optional(),
+    shipping_extracted: z.number().optional(),
+    total: z.string().optional(),
+    extracted_total: z.number().optional(),
+    discount: z.string().optional(),
+    details_and_offers: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+const ImmersiveProductSchema = z
+  .object({
+    product_results: z
+      .object({
+        title: z.string().optional(),
+        brand: z.string().optional(),
+        rating: z.number().optional(),
+        reviews: z.number().optional(),
+        price_range: z.string().optional(),
+        thumbnails: z.array(z.string()).optional(),
+        stores: z.array(StoreOfferSchema).optional(),
+      })
+      .passthrough()
+      .optional(),
+    error: z.string().optional(),
   })
   .passthrough();
 
@@ -73,6 +114,35 @@ export interface ShoppingResult {
   thumbnail?: string;
   delivery?: string;
   position?: number;
+  /**
+   * Token for `google_immersive_product` follow-up. When present, the caller
+   * can resolve real merchant URLs + per-seller pricing via
+   * `client.productOffers(token)`.
+   */
+  immersiveToken?: string;
+}
+
+export interface SellerOffer {
+  /** Merchant display name (e.g. "Best Buy", "Amazon", "eBay - seller123"). */
+  merchantName: string;
+  /** Normalized slug for joining against our deals table. */
+  merchantSlug: string;
+  /** Direct merchant URL — already a real URL, not a google.com redirect. */
+  link: string;
+  title?: string;
+  logo?: string;
+  /** Item price in cents (no shipping). */
+  priceCents?: number;
+  /** Strike-through "was" price in cents. */
+  originalPriceCents?: number;
+  /** Shipping cost in cents. 0 when explicitly free; undefined when unknown. */
+  shippingCents?: number;
+  /** priceCents + shippingCents (computed if Google doesn't supply directly). */
+  totalCents?: number;
+  /** Free-text discount the seller is advertising, e.g. "35% off". */
+  discountLabel?: string;
+  /** "In stock", "Pre-owned", "Free returns", etc. */
+  flags: string[];
 }
 
 export interface SerpApiOptions {
@@ -130,24 +200,7 @@ export class SerpApiClient {
       gl: country,
       num: String(limit),
     });
-    const url = `${this.baseUrl}/search?${params.toString()}`;
-
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), this.timeoutMs);
-    let body: unknown;
-    try {
-      const res = await this.fetchImpl(url, {
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`SerpApi HTTP ${res.status}: ${text.slice(0, 200)}`);
-      }
-      body = await res.json();
-    } finally {
-      clearTimeout(t);
-    }
+    const body = await this.fetchJson(`${this.baseUrl}/search?${params.toString()}`);
 
     const parsed = ResponseSchema.parse(body);
     if (parsed.error) throw new Error(`SerpApi error: ${parsed.error}`);
@@ -158,6 +211,87 @@ export class SerpApiClient {
       .map((r) => normalizeResult(r))
       .filter((r): r is ShoppingResult => r !== null);
   }
+
+  /**
+   * Follow-up call: given an `immersiveToken` from a `search()` result,
+   * fetch the per-seller offer list with real merchant URLs. This is the
+   * path to direct buy links (the legacy `google_product` engine was
+   * retired by Google).
+   *
+   * Costs 1 SerpApi credit per call.
+   */
+  async productOffers(immersiveToken: string): Promise<SellerOffer[]> {
+    if (!this.isConfigured()) {
+      throw new Error('SerpApi not configured (SERPAPI_KEY missing)');
+    }
+    if (!immersiveToken) return [];
+
+    const params = new URLSearchParams({
+      engine: 'google_immersive_product',
+      page_token: immersiveToken,
+      api_key: this.apiKey,
+    });
+    const body = await this.fetchJson(`${this.baseUrl}/search.json?${params.toString()}`);
+    const parsed = ImmersiveProductSchema.parse(body);
+    if (parsed.error) throw new Error(`SerpApi error: ${parsed.error}`);
+
+    const stores = parsed.product_results?.stores ?? [];
+    return stores.map((s) => normalizeOffer(s)).filter((o): o is SellerOffer => o !== null);
+  }
+
+  private async fetchJson(url: string): Promise<unknown> {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const res = await this.fetchImpl(url, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`SerpApi HTTP ${res.status}: ${text.slice(0, 200)}`);
+      }
+      return await res.json();
+    } finally {
+      clearTimeout(t);
+    }
+  }
+}
+
+function normalizeOffer(s: z.infer<typeof StoreOfferSchema>): SellerOffer | null {
+  if (!s.name || !s.link) return null;
+  const priceCents = s.extracted_price !== undefined ? Math.round(s.extracted_price * 100) : undefined;
+  const shippingCents = s.shipping_extracted !== undefined ? Math.round(s.shipping_extracted * 100) : undefined;
+  let totalCents = s.extracted_total !== undefined ? Math.round(s.extracted_total * 100) : undefined;
+  if (totalCents === undefined && priceCents !== undefined) {
+    // If the API didn't pre-compute the total, do it ourselves.
+    totalCents = priceCents + (shippingCents ?? 0);
+  }
+  const flags: string[] = [];
+  if (s.details_and_offers) {
+    for (const d of s.details_and_offers) {
+      const lower = d.toLowerCase();
+      if (lower.includes('in stock') || lower.includes('free shipping') || lower.includes('free returns')) {
+        flags.push(d);
+      } else if (lower.includes('pre-owned') || lower.includes('refurbished')) {
+        flags.push(d);
+      }
+    }
+  }
+  const out: SellerOffer = {
+    merchantName: prettifyMerchantName(s.name),
+    merchantSlug: slugifyMerchantName(s.name),
+    link: s.link,
+    flags,
+  };
+  if (s.title !== undefined) out.title = s.title;
+  if (s.logo !== undefined) out.logo = s.logo;
+  if (priceCents !== undefined) out.priceCents = priceCents;
+  if (s.extracted_original_price !== undefined) out.originalPriceCents = Math.round(s.extracted_original_price * 100);
+  if (shippingCents !== undefined) out.shippingCents = shippingCents;
+  if (totalCents !== undefined) out.totalCents = totalCents;
+  if (s.discount !== undefined) out.discountLabel = s.discount;
+  return out;
 }
 
 function normalizeResult(r: z.infer<typeof ShoppingResultSchema>): ShoppingResult | null {
@@ -182,6 +316,7 @@ function normalizeResult(r: z.infer<typeof ShoppingResultSchema>): ShoppingResul
   if (r.thumbnail !== undefined) out.thumbnail = r.thumbnail;
   if (r.delivery !== undefined) out.delivery = r.delivery;
   if (r.position !== undefined) out.position = r.position;
+  if (r.immersive_product_page_token !== undefined) out.immersiveToken = r.immersive_product_page_token;
   return out;
 }
 

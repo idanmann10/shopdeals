@@ -1,0 +1,17 @@
+[
+  { "label": "airpods-pro", "query": "apple airpods pro" },
+  { "label": "iphone-15-case", "query": "iphone 15 pro case otterbox" },
+  { "label": "sony-headphones", "query": "sony wh-1000xm5" },
+  { "label": "nintendo-switch", "query": "nintendo switch oled" },
+  { "label": "kindle", "query": "kindle paperwhite" },
+  { "label": "instant-pot", "query": "instant pot duo 6 quart" },
+  { "label": "lego-set", "query": "lego star wars millennium falcon" },
+  { "label": "ring-camera", "query": "ring doorbell pro 2" },
+  { "label": "dyson-v15", "query": "dyson v15 detect" },
+  { "label": "nike-shoes", "query": "nike air force 1" },
+  { "label": "adidas-shoes", "query": "adidas samba og" },
+  { "label": "kitchenaid", "query": "kitchenaid stand mixer artisan" },
+  { "label": "macbook-air", "query": "macbook air m3 15 inch" },
+  { "label": "65-inch-tv", "query": "lg c4 65 inch oled tv" },
+  { "label": "yeti-cooler", "query": "yeti tundra 45 cooler" }
+]

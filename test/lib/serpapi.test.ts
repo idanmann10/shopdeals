@@ -108,4 +108,96 @@ describe('SerpApiClient', () => {
     const client = new SerpApiClient({ apiKey: 'k' });
     expect(await client.search({ query: '   ' })).toEqual([]);
   });
+
+  it('captures the immersive_product_page_token from shopping results', async () => {
+    const { impl } = makeFetch({
+      shopping_results: [{
+        title: 'AirPods Pro',
+        link: 'https://amazon.com/dp/B0X',
+        source: 'amazon.com',
+        immersive_product_page_token: 'tok_abc123',
+      }],
+    });
+    const client = new SerpApiClient({ apiKey: 'k', fetchImpl: impl });
+    const out = await client.search({ query: 'airpods' });
+    expect(out[0]?.immersiveToken).toBe('tok_abc123');
+  });
+});
+
+describe('SerpApiClient.productOffers', () => {
+  it('returns normalized SellerOffers with real merchant URLs', async () => {
+    const { impl, calls } = makeFetch({
+      product_results: {
+        title: 'AirPods Pro',
+        stores: [
+          {
+            name: 'Best Buy',
+            link: 'https://www.bestbuy.com/site/airpods/12345',
+            title: 'Apple AirPods Pro 2nd Gen',
+            price: '$159.99',
+            extracted_price: 159.99,
+            original_price: '$249.00',
+            extracted_original_price: 249,
+            shipping: '+ $16.49',
+            shipping_extracted: 16.49,
+            total: '$176.48',
+            extracted_total: 176.48,
+            discount: '35% off',
+            details_and_offers: ['In stock online', 'Free returns'],
+          },
+          {
+            name: 'eBay - seller123',
+            link: 'https://www.ebay.com/itm/999',
+            extracted_price: 200,
+            shipping_extracted: 14.9,
+            extracted_total: 214.9,
+          },
+        ],
+      },
+    });
+    const client = new SerpApiClient({ apiKey: 'k', fetchImpl: impl });
+    const out = await client.productOffers('tok_abc');
+
+    expect(calls).toHaveLength(1);
+    const url = calls[0]!.url;
+    expect(url).toContain('engine=google_immersive_product');
+    expect(url).toContain('page_token=tok_abc');
+
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({
+      merchantName: 'Best Buy',
+      merchantSlug: 'best-buy',
+      link: 'https://www.bestbuy.com/site/airpods/12345',
+      priceCents: 15999,
+      shippingCents: 1649,
+      totalCents: 17648,
+      originalPriceCents: 24900,
+      discountLabel: '35% off',
+    });
+    expect(out[0]!.flags).toContain('In stock online');
+    expect(out[0]!.flags).toContain('Free returns');
+    expect(out[1]?.merchantName).toBe('EBay Seller123');
+  });
+
+  it('falls back to priceCents + shippingCents when total is missing', async () => {
+    const { impl } = makeFetch({
+      product_results: {
+        stores: [{ name: 'Best Buy', link: 'https://www.bestbuy.com/x', extracted_price: 100, shipping_extracted: 9.99 }],
+      },
+    });
+    const client = new SerpApiClient({ apiKey: 'k', fetchImpl: impl });
+    const out = await client.productOffers('tok');
+    expect(out[0]?.totalCents).toBe(10999);
+  });
+
+  it('returns an empty array when token is empty', async () => {
+    const client = new SerpApiClient({ apiKey: 'k' });
+    expect(await client.productOffers('')).toEqual([]);
+  });
+
+  it('throws on SerpApi error envelope', async () => {
+    const { impl } = makeFetch({ error: 'The Google Product service is no longer offered by Google.' });
+    const client = new SerpApiClient({ apiKey: 'k', fetchImpl: impl });
+    await expect(client.productOffers('tok')).rejects.toThrow(/no longer/);
+  });
 });

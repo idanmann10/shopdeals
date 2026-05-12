@@ -6,6 +6,7 @@
  * calls inside handlers. Logging + auth gating live in the server wrapper.
  */
 
+import * as findBestDeal from './find-best-deal.ts';
 import * as findDeals from './find-deals.ts';
 import * as findProducts from './find-products.ts';
 import * as getDeal from './get-deal.ts';
@@ -26,6 +27,7 @@ export interface ToolModule<I = unknown, O extends Record<string, unknown> = Rec
 // dispatcher in `server.ts` can iterate uniformly. The individual modules
 // remain strongly typed for direct consumers and tests.
 export const tools: ReadonlyArray<ToolModule<never, Record<string, unknown>>> = [
+  findBestDeal as unknown as ToolModule<never, Record<string, unknown>>,
   findDeals as unknown as ToolModule<never, Record<string, unknown>>,
   findProducts as unknown as ToolModule<never, Record<string, unknown>>,
   getDeal as unknown as ToolModule<never, Record<string, unknown>>,
@@ -37,4 +39,4 @@ export const tools: ReadonlyArray<ToolModule<never, Record<string, unknown>>> = 
 export const toolByName: Readonly<Record<string, ToolModule<never, Record<string, unknown>>>> =
   Object.fromEntries(tools.map((t) => [t.name, t]));
 
-export { findDeals, findProducts, getDeal, listMerchants, getPriceHistory, reportCodeResult };
+export { findBestDeal, findDeals, findProducts, getDeal, listMerchants, getPriceHistory, reportCodeResult };
