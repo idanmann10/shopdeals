@@ -29,6 +29,7 @@ import { deals, merchants } from '../../db/schema.ts';
 import { dealIsActive } from '../../db/predicates.ts';
 import { urlToMerchantSlug } from './get-code-for-url.ts';
 import { requireScope } from '../scope.ts';
+import type { CodeRef } from './types.ts';
 
 export const name = 'redeem_link';
 
@@ -55,7 +56,7 @@ export interface RedeemLinkResult extends Record<string, unknown> {
   /** Quick yes/no — do we have active codes for this merchant right now? */
   hasActiveCodes: boolean;
   /** When `hasActiveCodes` is true, the top code so the agent can surface it inline. */
-  topCode?: { code: string; title: string; dealId: string };
+  topCode?: CodeRef;
 }
 
 export async function handler(

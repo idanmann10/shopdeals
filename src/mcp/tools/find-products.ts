@@ -29,6 +29,7 @@ import { SerpApiClient, type SellerOffer, type ShoppingResult } from '../../lib/
 import { log } from '../../lib/log.ts';
 import { serpApiRateLimiter } from '../../lib/rate-limit.ts';
 import { requireScope } from '../scope.ts';
+import type { CodeRef } from './types.ts';
 
 export const name = 'find_products';
 
@@ -56,7 +57,7 @@ export interface FindProductsItem {
   delivery?: string;
   thumbnail?: string;
   /** Working coupon codes from our catalog matched by merchant slug. */
-  codes?: Array<{ code: string; title: string; dealId: string }>;
+  codes?: CodeRef[];
 }
 
 export interface FindProductsResult extends Record<string, unknown> {
@@ -199,7 +200,7 @@ export async function handler(
 async function loadCodesForSlugs(
   ctx: McpContext,
   slugs: string[],
-): Promise<Map<string, Array<{ code: string; title: string; dealId: string }>>> {
+): Promise<Map<string, CodeRef[]>> {
   requireScope(ctx, 'deals:read');
 
   const rows = await ctx.db
@@ -220,7 +221,7 @@ async function loadCodesForSlugs(
     )
     .limit(200);
 
-  const out = new Map<string, Array<{ code: string; title: string; dealId: string }>>();
+  const out = new Map<string, CodeRef[]>();
   for (const r of rows) {
     if (!r.code) continue;
     const list = out.get(r.slug) ?? [];
