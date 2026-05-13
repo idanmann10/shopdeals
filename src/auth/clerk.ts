@@ -34,11 +34,6 @@ export function clerkClient(): ClerkClient {
   return cached;
 }
 
-/** Test helper — drop the cached client so tests can swap env vars. */
-export function resetClerkClientCache(): void {
-  cached = undefined;
-}
-
 function makeStubClerkClient(): ClerkClient {
   const handler: ProxyHandler<object> = {
     get(_target, prop) {

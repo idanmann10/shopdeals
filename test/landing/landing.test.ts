@@ -14,7 +14,6 @@ vi.mock('../../src/lib/env.ts', () => ({
     MCP_OAUTH_ISSUER: 'http://localhost:3000',
     FMTC_BASE_URL: 'https://account.fmtc.co/cp/api',
   }),
-  resetEnvCache: () => undefined,
 }));
 
 vi.mock('../../src/db/client.ts', () => ({
