@@ -16,11 +16,7 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["./src/*"]
-    }
+    "noEmit": true
   },
   "include": ["src/**/*", "test/**/*", "drizzle.config.ts"],
   "exclude": ["node_modules", "dist"]
