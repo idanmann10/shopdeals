@@ -6,7 +6,6 @@
  */
 import { inspect } from 'node:util';
 import { describe, expect, it, vi } from 'vitest';
-import { sql } from 'drizzle-orm';
 import {
   DEFAULT_FAILING_MIN_SAMPLES,
   DEFAULT_FAILING_THRESHOLD,
@@ -143,13 +142,5 @@ describe('runLifecyclePass', () => {
     expect(captured[1]!.whereSql).toContain(String(DEFAULT_STALE_GRACE_HOURS));
     expect(captured[2]!.whereSql).toContain(String(DEFAULT_FAILING_THRESHOLD));
     expect(captured[2]!.whereSql).toContain(String(DEFAULT_FAILING_MIN_SAMPLES));
-  });
-});
-
-// Sanity check: importing `sql` from drizzle-orm pulls in the template
-// builder we rely on. If drizzle ever moves it this test will fail loudly.
-describe('drizzle sql import', () => {
-  it('exists', () => {
-    expect(typeof sql).toBe('function');
   });
 });

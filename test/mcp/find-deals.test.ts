@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { handler, inputSchema } from '../../src/mcp/tools/find-deals.ts';
 import { encodeCursor, decodeCursor } from '../../src/mcp/cursor.ts';
 import type { McpContext } from '../../src/mcp/context.ts';
@@ -206,10 +206,5 @@ describe('find_deals tool', () => {
     expect(columnNames).toContain('ingested_at');
     expect(columnNames).toContain('id');
     expect(columnNames).not.toContain('success_rate');
-  });
-
-  // Sanity-check that `vi` is real so accidentally introducing real I/O fails CI.
-  it('does not invoke Date.now via the global pool', () => {
-    expect(vi).toBeTruthy();
   });
 });

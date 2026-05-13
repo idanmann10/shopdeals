@@ -180,9 +180,4 @@ describe('report_code_result tool', () => {
     // surfaced verbatim on the response payload.
     expect(out.newSuccessRate).toBe(0.873);
   });
-
-  // Smoke check that vi is wired up in case this file is run in isolation.
-  it('test environment has vitest globals', () => {
-    expect(vi).toBeTruthy();
-  });
 });
