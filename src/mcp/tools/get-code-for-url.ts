@@ -28,6 +28,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
 import { extractAmazonAsin } from '../../lib/affiliate.ts';
+import { discountSummary } from '../format.ts';
 
 export const name = 'get_code_for_url';
 
@@ -181,13 +182,20 @@ export async function handler(
         // bps-based: approximate against a $100 cart for ranking purposes.
         item.estimatedDiscountCents = Math.round(r.discountValueBps);
       }
-      // Human discount summary.
-      if (r.discountType === 'pct_off' && r.discountValueBps) {
-        item.discountSummary = `${(r.discountValueBps / 100).toFixed(0)}% off`;
-      } else if (r.discountType === 'amt_off' && r.discountValueCents) {
-        item.discountSummary = `$${(r.discountValueCents / 100).toFixed(0)} off`;
-      } else if (r.discountType === 'free_shipping') {
-        item.discountSummary = 'free shipping';
+      // Only surface a summary when we have enough metadata to make it
+      // actionable — pct/amt require their value field, free_shipping is
+      // self-describing. Other discount kinds (unknown / gift / tiered)
+      // fall through and leave the field undefined.
+      if (
+        (r.discountType === 'pct_off' && r.discountValueBps) ||
+        (r.discountType === 'amt_off' && r.discountValueCents) ||
+        r.discountType === 'free_shipping'
+      ) {
+        item.discountSummary = discountSummary({
+          discountType: r.discountType,
+          discountValueBps: r.discountValueBps,
+          discountValueCents: r.discountValueCents,
+        });
       }
       return item;
     })
