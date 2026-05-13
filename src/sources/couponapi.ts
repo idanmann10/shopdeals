@@ -126,17 +126,17 @@ export class CouponApiAdapter implements SourceAdapter {
   constructor(opts: CouponApiAdapterOptions = {}) {
     const e = (() => {
       try {
-        return env() as unknown as Record<string, string | undefined>;
+        return env();
       } catch {
         return undefined;
       }
     })();
-    this.apiKey = opts.apiKey ?? e?.['COUPONAPI_KEY'] ?? '';
-    this.endpoint = opts.endpoint ?? e?.['COUPONAPI_BASE_URL'] ?? DEFAULT_BASE_URL;
+    this.apiKey = opts.apiKey ?? e?.COUPONAPI_KEY ?? '';
+    this.endpoint = opts.endpoint ?? e?.COUPONAPI_BASE_URL ?? DEFAULT_BASE_URL;
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.lastExtract = opts.lastExtract;
     this.offRecord = opts.offRecord ?? false;
-    this.country = opts.country ?? e?.['COUPONAPI_COUNTRY'] ?? undefined;
+    this.country = opts.country ?? e?.COUPONAPI_COUNTRY ?? undefined;
     this.timeoutMs = opts.timeoutMs ?? 60_000;
   }
 

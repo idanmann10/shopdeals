@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { and, asc, desc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, sql, type SQL } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { prices } from '../../db/schema.ts';
 import type { NewPrice } from '../../db/schema.ts';
@@ -60,7 +60,7 @@ export async function handler(
     await maybeRefreshFromKeepa(input.asin, ctx);
   }
 
-  const conditions = [] as Array<ReturnType<typeof eq>>;
+  const conditions: SQL[] = [];
   if (input.asin) {
     conditions.push(eq(prices.asin, input.asin));
   } else if (input.productUrl) {
@@ -69,10 +69,7 @@ export async function handler(
 
   if (input.days != null) {
     conditions.push(
-      gt(
-        prices.observedAt,
-        sql`now() - make_interval(days => ${input.days})` as unknown as Date,
-      ),
+      gt(prices.observedAt, sql<Date>`now() - make_interval(days => ${input.days})`),
     );
   }
 

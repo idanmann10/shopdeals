@@ -35,14 +35,13 @@ import { requireScope } from '../../src/middleware/scope.ts';
 import type { AuthPrincipal } from '../../src/auth/types.ts';
 
 function buildApp(opts?: { allowAnonymous?: boolean; scope?: 'admin' | 'deals:read' }) {
-  const app = new Hono();
+  const app = new Hono<{ Variables: { principal: AuthPrincipal } }>();
   app.use('*', authMiddleware(opts ? { allowAnonymous: opts.allowAnonymous ?? false } : {}));
   if (opts?.scope) {
     app.use('*', requireScope(opts.scope));
   }
   app.get('/protected', (c) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const principal = (c as any).get('principal') as AuthPrincipal | undefined;
+    const principal: AuthPrincipal | undefined = c.get('principal');
     return c.json({ ok: true, hash: principal?.clientHash ?? null });
   });
   return app;

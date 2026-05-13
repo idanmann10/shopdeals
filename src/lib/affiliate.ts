@@ -78,14 +78,14 @@ export function createAffiliateRewriter(overrides: AffiliateConfig = {}): {
 } {
   const e = (() => {
     try {
-      return env() as unknown as Record<string, string | undefined>;
+      return env();
     } catch {
       return undefined;
     }
   })();
 
-  const amazonTag = overrides.amazonAssociatesTag ?? e?.['AMAZON_ASSOCIATES_TAG'];
-  const skimPub = overrides.skimlinksPublisherId ?? e?.['SKIMLINKS_PUBLISHER_ID'];
+  const amazonTag = overrides.amazonAssociatesTag ?? e?.AMAZON_ASSOCIATES_TAG;
+  const skimPub = overrides.skimlinksPublisherId ?? e?.SKIMLINKS_PUBLISHER_ID;
 
   const config: AffiliateConfig = {
     ...(amazonTag ? { amazonAssociatesTag: amazonTag } : {}),
