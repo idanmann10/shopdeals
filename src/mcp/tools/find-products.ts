@@ -187,7 +187,6 @@ export async function handler(
     };
     if (o.priceCents !== undefined) item.priceCents = o.priceCents;
     if (o.originalPriceCents !== undefined) item.oldPriceCents = o.originalPriceCents;
-    // Surface flags/delivery info as the `delivery` field for backward compat.
     if (o.flags.length > 0) item.delivery = o.flags.join(' · ');
     const matches = codesBySlug.get(o.merchantSlug);
     if (matches && matches.length > 0) item.codes = matches.slice(0, 3);

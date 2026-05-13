@@ -1564,13 +1564,9 @@ export function landingHtml(data: LandingData = {}): string {
 </html>`;
 }
 
-/** Partner logos for the marquee — real monochrome brand marks rendered as
- *  inline SVG. Each mark is brand-accurate at the silhouette level; CSS dims
- *  the whole row so they read as ambient context, not endorsements. */
+/** Partner logos for the marquee — inline SVG brand marks. CSS dims the row
+ *  so they read as ambient context, not endorsements. */
 function partnersRow(): string {
-  // Brand mark + wordmark composite. Each item renders the mark (24px square)
-  // followed by the brand name in the page's system font, so the row reads
-  // as "icon + name" rather than just abstract glyphs.
   const items: Array<{ name: string; svg: string }> = [
     {
       name: 'Claude',

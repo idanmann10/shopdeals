@@ -29,7 +29,7 @@
  *   csv[18] BUY_BOX    — buy box price (includes shipping)
  *
  * We surface AMAZON when present; fall back to NEW otherwise. BUY_BOX has a
- * different encoding (triples: ts, price, shipping) so we skip it for now.
+ * different encoding (triples: ts, price, shipping) and is not yet decoded.
  */
 import { z } from 'zod';
 import { env } from '../lib/env.ts';

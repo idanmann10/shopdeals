@@ -5,7 +5,7 @@
  *   - `tool` comes from `c.var.mcpTool` if the MCP transport set it; otherwise the route path.
  *   - `units` comes from `TOOL_UNITS[tool]` (defaults to 1).
  *   - Anonymous-in-dev requests are skipped so we don't pollute usage.
- *   - Non-2xx responses are not recorded — failed requests don't bill the customer.
+ *   - Non-2xx responses are not recorded.
  *   - DB inserts are best-effort; we never let usage logging break the request.
  */
 
@@ -17,10 +17,9 @@ import { env } from '../lib/env.ts';
 import { log } from '../lib/log.ts';
 
 /**
- * Per-tool unit weights. Tools not in this map default to 1 unit.
- *
- *   - `report_code_result` is telemetry (free, billed at 0).
- *   - `get_price_history` is more expensive due to upstream Keepa cost.
+ * Per-tool unit weights for usage accounting. Tools not in this map default
+ * to 1 unit. `get_price_history` is heavier because of the upstream Keepa
+ * cost; `report_code_result` is telemetry and weighted at 0.
  */
 export const TOOL_UNITS = {
   find_deals: 1,
@@ -59,7 +58,7 @@ export const usageMiddleware = (
   return async (c, next) => {
     await next();
 
-    // Only record on success (2xx). Failed requests must not bill.
+    // Only record on success (2xx).
     const status = c.res.status;
     if (status < 200 || status >= 300) return;
 

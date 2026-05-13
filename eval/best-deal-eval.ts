@@ -20,8 +20,7 @@
  *   - code-match % (queries where the best pick had a code attached)
  *   - SerpApi credits consumed
  *
- * SerpApi cost: 2 credits per query × N queries. The default 15-query set
- * burns ~30 credits — well within the 250/mo free tier.
+ * SerpApi cost: up to ~4 credits per query (1 search + up to 3 immersive).
  */
 
 import { readFile } from 'node:fs/promises';

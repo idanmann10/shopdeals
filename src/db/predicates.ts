@@ -10,9 +10,6 @@ import type { SQL } from 'drizzle-orm';
 import { deals } from './schema.ts';
 
 export function dealIsActive(): SQL<unknown> {
-  // Combine the `is_active=true` flag with the expiry guard. Returning a
-  // single SQL fragment lets callers spread it into their own `and(...)`
-  // chains alongside per-query filters.
   return and(
     eq(deals.isActive, true),
     or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),

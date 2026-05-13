@@ -19,9 +19,8 @@
  *   }
  *
  * Pagination: `pagination.pageSize` clamped to [10, 200]. If Awin returns a
- * `pagination.cursor`, we forward it as `pagination.cursor` on the next
- * request. For v1 we still only request a single page of pageSize=200 — full
- * incremental sync via `lastUpdated` timestamps is a TODO.
+ * `pagination.cursor`, we forward it on the next request.
+ * TODO: incremental sync via `lastUpdated` timestamps.
  *
  * Rate limit: ~20 req/min/user, per Awin folklore. We funnel page requests
  * through `p-limit(1)` and sleep 3.5s between pages. Defensive depth.

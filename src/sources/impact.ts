@@ -4,8 +4,8 @@
  * Endpoint (flat — no per-campaign nesting):
  *   GET https://api.impact.com/Mediapartners/{SID}/PromoCodes?Page=N&PageSize=200
  *
- * For v1 we enumerate every joined campaign at once. Filtering by
- * `?CampaignId=N` is supported by the API but we don't need it here.
+ * Enumerates every joined campaign at once; the API also supports
+ * `?CampaignId=N` filtering if we ever need per-campaign pulls.
  *
  * Pagination: the response includes `@numpages` and (when there's another
  * page) `@nextpageuri`. We follow `@nextpageuri` until it's missing/empty

@@ -89,10 +89,8 @@ export class RateLimiter {
 /**
  * Shared instance for tools that hit paid upstreams (SerpApi).
  *
- * Defaults: 20 requests, refilled at 0.5/sec (1 token every 2s).
- * That's an effective rate of 1,800 requests/hour per client, or a burst
- * of 20 immediately followed by a slower sustained 1/2sec. For SerpApi at
- * 2 credits per call, that's 3,600 credits/hour per client — bounded.
+ * Defaults: 20 requests, refilled at 0.5/sec (1 token every 2s). That's
+ * a burst of 20 then a sustained ~1 req every 2s per client.
  */
 export const serpApiRateLimiter = new RateLimiter({
   capacity: 20,
