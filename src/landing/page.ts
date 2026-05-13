@@ -2,9 +2,10 @@
  * Server-rendered landing page. Single HTML string returned from `GET /`.
  * No SPA, no build step, no external image assets beyond Google Fonts.
  *
- * Design reference: DealPilot AI shopping-agent mockup. Component-driven
- * layout with a live product-card hero, two illustrated narrative sections,
- * and dedicated Add-to-Claude / Add-to-ChatGPT install cards. Brand: shopdeals.
+ * Design reference: era.app layout — sticky navbar, balanced hero with
+ * primary "Add to Claude" pill, dimmed partners carousel, 15/6/3 dark
+ * feature cards, and an accordion FAQ. Dark theme (#0e0f0c surface,
+ * #f3f3f1 text) tinted with the shopdeals amber (#f26b3a).
  *
  * Live counts (deals / merchants / freshness) come from `loadLandingStats`
  * so the page always looks alive even with a small catalog.
@@ -25,674 +26,682 @@ export function landingHtml(data: LandingData = {}): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>shopdeals — Your AI shopping agent</title>
-<meta name="description" content="Ask your AI to find the best deal. shopdeals plugs into Claude, ChatGPT, and Cursor — it compares trusted sellers, surfaces working coupon codes, and hands back the best buy in one click." />
-<meta property="og:title" content="shopdeals — Your AI shopping agent" />
-<meta property="og:description" content="Ask your AI. We compare sellers, find working codes, and surface the best deal." />
+<title>shopdeals — the MCP server for shopping</title>
+<meta name="description" content="shopdeals is an MCP server that gives Claude, ChatGPT, and Cursor the ability to shop. It finds the best deal across trusted sellers, watches prices, and applies coupon codes that actually work." />
+<meta property="og:title" content="shopdeals — the MCP server for shopping" />
+<meta property="og:description" content="Make Claude find the best deal. An MCP server that compares sellers, watches prices, and applies working coupons." />
 <meta property="og:type" content="website" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" />
 <style>
   :root {
-    /* Warmer commerce palette: deep amber/orange brand (think Honey,
-       Amazon's pricing UI, Capital One Shopping) over a soft cream
-       neutral. The previous purple was clean but read as "AI startup"
-       not "shop the deals." Orange is the universal commerce signal. */
-    --bg: #fffdf9;             /* near-white with a faint warm tint */
-    --bg-soft: #f7f3ea;        /* warm cream for section bands */
-    --bg-card: #ffffff;
-    --ink: #15131a;            /* near-black, warm-leaning */
-    --ink-2: #56535e;
-    --ink-3: #8c8893;
-    --line: #ede8dc;
-    --line-soft: #f5f0e6;
-    --brand: #f26b3a;          /* deep amber-orange — the commerce signal */
-    --brand-2: #ff8757;        /* lighter for gradients / hover */
-    --brand-soft: #fdeee5;     /* warm tint for badges + soft hover bg */
-    --brand-soft-2: #fff7f1;
-    --green: #0e8a5f;          /* success green for "best deal" badges */
-    --green-soft: #e2f3ec;
-    --warm: #f26b3a;
-    --warm-soft: #fdeee5;
-    --radius: 16px;
-    --radius-sm: 10px;
+    --bg: #0e0f0c;
+    --surface: #191a17;
+    --surface-2: #1f201d;
+    --text: #f3f3f1;
+    --text-dim: rgba(243,243,241,0.6);
+    --text-dimmer: rgba(243,243,241,0.4);
+    --line: rgba(243,243,241,0.08);
+    --line-strong: rgba(243,243,241,0.14);
+    --brand: #f26b3a;
+    --brand-2: #ff8757;
+    --brand-soft: #ffd9c4;
+    --claude: #d97757;
+    --pink-card: linear-gradient(155deg, #ffd9c4 0%, #fff1e3 55%, #fff7ee 100%);
+    --teal-card: #1f2b29;
+    --radius: 12px;
   }
   *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     font-size: 16px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
-  a { color: var(--ink); text-decoration: none; }
+  a { color: inherit; text-decoration: none; }
   ::selection { background: var(--brand); color: white; }
 
-  .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  .container { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
 
-  /* ---------- Header ---------- */
-  header { padding: 26px 0; }
-  header .row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  /* ---------- Brand mark ---------- */
+  .brand-mark { width: 28px; height: 28px; flex-shrink: 0; display: inline-grid; place-items: center; color: var(--brand); }
+  .brand-mark.lg { width: 56px; height: 56px; }
+  .brand-mark svg { width: 100%; height: 100%; }
+
+  /* ---------- Navbar ---------- */
+  .nav-wrap {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(14,15,12,0.78);
+    backdrop-filter: saturate(140%) blur(14px);
+    -webkit-backdrop-filter: saturate(140%) blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav.bar {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px; gap: 24px;
+  }
   .logo {
     display: inline-flex; align-items: center; gap: 10px;
-    font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
-    color: var(--ink);
+    font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
+    color: var(--text);
   }
-  /* Logo mark: an inline SVG price-tag. Universally legible as "deal"
-     across cultures and screen sizes. Filled with the brand color, with
-     a subtle highlight via a brand-2 gradient stop. */
-  .logo-mark {
-    width: 32px; height: 32px;
-    flex-shrink: 0;
-    display: inline-grid; place-items: center;
+  .nav-right { display: flex; align-items: center; gap: 8px; }
+  .nav-link {
+    padding: 8px 14px; font-size: 14px; color: var(--text-dim);
+    border-radius: 999px;
   }
-  .logo-mark svg { width: 100%; height: 100%; }
-  .nav { display: flex; gap: 32px; font-size: 14.5px; align-items: center; }
-  .nav a { color: var(--ink-2); font-weight: 500; }
-  .nav a:hover { color: var(--ink); }
+  .nav-link:hover { color: var(--text); }
   .nav-cta {
-    padding: 10px 20px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 18px;
     background: var(--brand); color: white;
-    border-radius: 999px; font-weight: 600;
-    box-shadow: 0 2px 0 rgba(242,107,58,0.15), 0 8px 24px rgba(242,107,58,0.20);
-    transition: transform .12s, box-shadow .12s;
+    font-size: 14px; font-weight: 600;
+    border-radius: 999px;
+    transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
   }
-  .nav-cta:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(242,107,58,0.18), 0 12px 28px rgba(242,107,58,0.28); }
+  .nav-cta:hover { background: var(--brand-2); transform: translateY(-1px); }
+  .nav-cta svg { width: 14px; height: 14px; }
+  @media (max-width: 720px) {
+    .nav-link.docs { display: none; }
+  }
 
   /* ---------- Hero ---------- */
-  .hero { padding: 64px 0 80px; position: relative; overflow: hidden; }
-  .hero::before {
-    content: '';
-    position: absolute;
-    bottom: -200px; left: -260px;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(255,135,87,0.16) 0%, transparent 65%);
-    pointer-events: none; z-index: 0;
-  }
+  .hero { padding: 96px 0 64px; position: relative; overflow: hidden; }
   .hero-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
-    align-items: center; position: relative; z-index: 1;
-  }
-  @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; gap: 48px; } }
-
-  h1.hero-title {
-    font-weight: 800;
-    font-size: clamp(44px, 6vw, 72px);
-    line-height: 1.02;
-    letter-spacing: -0.035em;
-    margin: 0 0 24px;
-  }
-  .hero-sub {
-    font-size: 17.5px;
-    color: var(--ink-2);
-    max-width: 460px;
-    margin: 0 0 36px;
-    line-height: 1.55;
-  }
-  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .btn-primary, .btn-ghost {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-family: inherit; font-size: 15px; font-weight: 600;
-    padding: 14px 26px; border-radius: 10px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform .12s, box-shadow .12s, background .12s;
-  }
-  .btn-primary {
-    background: var(--brand); color: white; border: 1px solid var(--brand);
-    box-shadow: 0 2px 0 rgba(242,107,58,0.18), 0 10px 24px rgba(242,107,58,0.22);
-  }
-  .btn-primary:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 0 rgba(242,107,58,0.18), 0 14px 30px rgba(242,107,58,0.30); }
-  .btn-ghost {
-    background: white; color: var(--brand); border: 1px solid var(--brand-soft);
-  }
-  .btn-ghost:hover { background: var(--brand-soft-2); border-color: var(--brand); }
-  .btn-primary svg, .btn-ghost svg { width: 16px; height: 16px; }
-
-  /* ---------- Live demo card (hero right) ---------- */
-  .demo-card {
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 26px;
-    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 30px 80px rgba(242,107,58,0.13);
-  }
-  .demo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-  .demo-head .logo-mark { width: 26px; height: 26px; }
-  .demo-head .name { font-weight: 700; font-size: 15px; }
-  .demo-input {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px;
-    background: white; border: 1px solid var(--line);
-    border-radius: 12px;
-    margin-bottom: 20px;
-  }
-  .demo-input .input-fake {
-    flex: 1; padding: 8px 10px; display: flex; align-items: center; gap: 8px;
-    font-size: 14px; color: var(--ink-3);
-  }
-  .demo-input .input-fake svg { width: 14px; height: 14px; color: var(--ink-3); }
-  .demo-input .send {
-    display: inline-grid; place-items: center;
-    width: 34px; height: 34px; border-radius: 8px;
-    background: var(--brand); color: white;
-    box-shadow: 0 2px 0 rgba(242,107,58,0.20);
-  }
-  .demo-input .send svg { width: 14px; height: 14px; }
-
-  .progress-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
-  .progress-item { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--ink-2); }
-  .progress-item .ring {
-    width: 18px; height: 18px; border-radius: 50%;
-    display: inline-grid; place-items: center; flex-shrink: 0;
-  }
-  .progress-item.done .ring { background: var(--brand); color: white; }
-  .progress-item.done .ring svg { width: 10px; height: 10px; }
-  .progress-item.done { color: var(--ink); }
-  .progress-item.active .ring {
-    border: 2px solid var(--brand);
-    background: white;
-  }
-  .progress-item.active { color: var(--ink); }
-  .progress-item.pending .ring {
-    border: 2px dashed var(--ink-3);
-    background: transparent;
-  }
-  .progress-item.pending { color: var(--ink-3); }
-
-  /* Seller comparison table */
-  .seller-table {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    overflow: hidden;
-    font-size: 13.5px;
-  }
-  .seller-table .header {
-    display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr;
-    padding: 12px 16px;
-    background: var(--bg-soft);
-    border-bottom: 1px solid var(--line);
-    font-weight: 600; color: var(--ink-2); font-size: 12.5px;
-  }
-  .seller-table .row {
-    display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr;
-    padding: 14px 16px;
-    border-top: 1px solid var(--line-soft);
+    display: grid; grid-template-columns: 15fr 9fr; gap: 64px;
     align-items: center;
   }
-  .seller-table .row:first-of-type { border-top: none; }
-  .seller-table .row .seller-name {
-    display: flex; align-items: center; gap: 10px;
-    font-weight: 600;
-  }
-  .seller-table .row .seller-name img {
-    width: 24px; height: 24px; border-radius: 6px;
-    background: white; padding: 1px; box-shadow: 0 0 0 1px var(--line);
-    flex-shrink: 0; object-fit: contain;
-  }
-  .seller-table .row .seller-name-text { display: flex; flex-direction: column; min-width: 0; }
-  .seller-table .row.best {
-    background: var(--brand-soft-2);
-    color: var(--brand);
-    font-weight: 600;
-  }
-  .seller-table .row.best .seller-name { color: var(--brand); }
-  .seller-table .row.best .badge {
-    font-size: 11px; font-weight: 500; color: var(--brand);
-    margin-top: 1px;
-  }
+  @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; gap: 36px; } }
 
-  .approve {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%;
-    margin-top: 18px;
-    padding: 14px;
-    background: var(--brand); color: white;
-    border: none; border-radius: 12px;
-    font-family: inherit; font-size: 14.5px; font-weight: 600;
+  h1.hero-title {
+    font-weight: 600;
+    font-size: clamp(40px, 5.6vw, 56px);
+    line-height: 1.04;
+    letter-spacing: -1.12px;
+    margin: 0;
+    color: var(--text);
+    text-wrap: balance;
+  }
+  .hero-right { display: flex; flex-direction: column; gap: 24px; max-width: 440px; }
+  .hero-sub {
+    font-size: 20px;
+    line-height: 1.45;
+    color: var(--text-dim);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .hero-ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 12px 22px;
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    border-radius: 999px;
     cursor: pointer;
-    box-shadow: 0 2px 0 rgba(242,107,58,0.20), 0 12px 28px rgba(242,107,58,0.20);
-    transition: transform .12s, box-shadow .12s;
+    border: 1px solid transparent;
+    transition: transform .14s ease, background .14s ease, border-color .14s ease;
+    text-decoration: none;
   }
-  .approve:hover { transform: translateY(-1px); }
-  .approve svg { width: 14px; height: 14px; }
+  .btn-primary {
+    background: var(--brand); color: white;
+    box-shadow: 0 10px 28px rgba(242,107,58,0.30);
+  }
+  .btn-primary:hover { background: var(--brand-2); transform: translateY(-1px); }
+  .btn-primary .leaf { color: var(--claude); }
+  .btn-secondary {
+    background: rgba(243,243,241,0.06); color: var(--text);
+    border-color: rgba(243,243,241,0.10);
+  }
+  .btn-secondary:hover { background: rgba(243,243,241,0.10); border-color: rgba(243,243,241,0.18); }
+  .btn svg { width: 16px; height: 16px; }
 
-  /* ---------- Generic feature block ---------- */
-  .feature-block {
-    background: var(--bg-soft);
-    border-radius: 22px;
-    padding: 48px;
-    margin-top: 24px;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
+  .hero-meta {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-dimmer);
   }
-  @media (max-width: 880px) {
-    .feature-block { grid-template-columns: 1fr; padding: 32px; gap: 32px; }
+  .hero-meta .tri {
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--text-dimmer);
   }
-  .feature-block.reverse { direction: rtl; }
-  .feature-block.reverse > * { direction: ltr; }
 
-  .feature-block h2 {
-    font-weight: 700;
-    font-size: clamp(30px, 4vw, 38px);
-    line-height: 1.1;
-    letter-spacing: -0.025em;
+  /* ---------- Partners carousel ---------- */
+  .partners {
+    padding: 56px 0 64px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .partners-eyebrow {
+    text-align: center;
+    color: var(--text-dimmer);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 28px;
+  }
+  .marquee {
+    display: flex; gap: 64px;
+    width: max-content;
+    animation: marquee 36s linear infinite;
+  }
+  .marquee:hover { animation-play-state: paused; }
+  .marquee-track-outer { overflow: hidden; mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%); }
+  .marquee .logo-item {
+    display: inline-flex; align-items: center; gap: 10px;
+    color: rgba(243,243,241,0.5);
+    font-size: 16px; font-weight: 500;
+    white-space: nowrap;
+  }
+  .marquee .logo-item svg { height: 26px; width: auto; fill: rgba(243,243,241,0.5); }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ---------- Feature cards ---------- */
+  .features { padding: 96px 0 64px; }
+  .features-header { margin-bottom: 44px; max-width: 720px; }
+  .features-eyebrow {
+    color: var(--brand);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     margin: 0 0 14px;
   }
-  .feature-block p.lede {
-    font-size: 16.5px;
-    color: var(--ink-2);
-    max-width: 420px;
-    margin: 0 0 22px;
+  .features-title {
+    font-size: clamp(32px, 4vw, 44px);
+    font-weight: 600;
+    letter-spacing: -0.88px;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
   }
-  .bullet-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
-  .bullet {
-    display: flex; align-items: center; gap: 12px;
-    font-size: 15px; color: var(--ink);
+  .features-grid {
+    display: grid; grid-template-columns: 15fr 6fr 3fr;
+    gap: 14px;
+    align-items: stretch;
   }
-  .bullet .check {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: var(--brand); color: white;
-    display: inline-grid; place-items: center; flex-shrink: 0;
-  }
-  .bullet .check svg { width: 12px; height: 12px; }
+  @media (max-width: 1080px) { .features-grid { grid-template-columns: 1fr; } }
 
-  /* Chat mockup card */
-  .chat-card {
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 26px;
-    box-shadow: 0 2px 0 rgba(15,13,31,0.02), 0 16px 40px rgba(242,107,58,0.08);
+  .fcard {
+    border-radius: var(--radius);
+    padding: 32px;
+    display: flex; flex-direction: column;
+    min-height: 460px;
+    position: relative;
+    overflow: hidden;
   }
-  .chat-card .head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-weight: 600; font-size: 15px; }
-  .chat-card .head .logo-mark { width: 26px; height: 26px; }
-  .chat-bubble {
-    background: white;
-    border-radius: 16px;
-    padding: 12px 16px;
-    font-size: 14px;
-    color: var(--ink);
-    width: fit-content;
-    max-width: 80%;
-    border: 1px solid var(--line-soft);
-  }
-  .chat-bubble.user {
-    background: var(--brand-soft);
-    color: var(--ink);
-    margin-left: auto;
-    margin-bottom: 12px;
-    border: none;
-  }
-  .chat-bubble.ai { background: white; border: 1px solid var(--line); }
-  .typing {
-    display: inline-flex; gap: 4px; margin-top: 4px;
-  }
-  .typing span {
-    width: 5px; height: 5px; border-radius: 50%;
-    background: var(--brand);
-    animation: typing 1.2s ease-in-out infinite;
-  }
-  .typing span:nth-child(2) { animation-delay: 0.18s; }
-  .typing span:nth-child(3) { animation-delay: 0.36s; }
-  @keyframes typing {
-    0%, 100% { opacity: 0.3; transform: translateY(0); }
-    40% { opacity: 1; transform: translateY(-3px); }
-  }
+  .fcard.expanded { background: var(--pink-card); color: #1a120c; }
+  .fcard.expanded .fc-pill { background: rgba(26,18,12,0.08); color: #1a120c; }
+  .fcard.expanded .fc-eyebrow { color: rgba(26,18,12,0.55); }
+  .fcard.expanded .fc-body { color: rgba(26,18,12,0.7); }
+  .fcard.expanded .fc-cta { color: #1a120c; }
+  .fcard.expanded .fc-cta:hover { background: rgba(26,18,12,0.08); }
+  .fcard.dark { background: var(--surface); color: var(--text); }
+  .fcard.dark .fc-body { color: var(--text-dim); }
+  .fcard.dark .fc-pill { background: rgba(243,243,241,0.08); color: var(--text); }
+  .fcard.teal { background: var(--teal-card); color: var(--text); }
+  .fcard.teal .fc-body { color: rgba(243,243,241,0.75); }
+  .fcard.teal .fc-pill { background: rgba(243,243,241,0.10); color: var(--text); }
 
-  /* ---------- Install cards ---------- */
-  .install-section { padding: 80px 0 32px; }
-  .install-section h2 {
-    text-align: center; font-weight: 700;
-    font-size: clamp(28px, 3.5vw, 36px);
-    letter-spacing: -0.02em;
-    margin: 0 0 10px;
-  }
-  .install-section .lede {
-    text-align: center; color: var(--ink-2); font-size: 16px; margin: 0 0 36px;
-  }
-  .install-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
-  }
-  @media (max-width: 960px) { .install-grid { grid-template-columns: 1fr; } }
-  .install-card {
-    background: var(--bg-card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 26px 26px;
-    display: flex; align-items: center; gap: 18px;
-    text-decoration: none;
-    transition: border-color .12s, transform .12s, box-shadow .12s;
-    cursor: pointer;
-  }
-  .install-card:hover {
-    border-color: var(--brand);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(242,107,58,0.12);
-  }
-  .install-card .ico {
-    width: 48px; height: 48px; border-radius: 12px;
+  .fc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 28px; }
+  .fc-icon {
+    width: 44px; height: 44px; border-radius: 10px;
     display: inline-grid; place-items: center;
-    color: white; flex-shrink: 0;
+    background: rgba(26,18,12,0.08);
   }
-  /* Install-card icons: each platform gets its own canonical brand color
-     (Anthropic peach, OpenAI green, Cursor charcoal). These DON'T need to
-     match our orange brand — they're product identifiers, and using the
-     real product palette makes the cards instantly recognizable. */
-  .ico-claude { background: linear-gradient(135deg, #d97757 0%, #e89178 100%); }
-  .ico-chatgpt { background: linear-gradient(135deg, #10a37f 0%, #19c69b 100%); }
-  .ico-cursor { background: linear-gradient(135deg, #15131a 0%, #2e2a36 100%); }
-  .install-card .text {
-    flex: 1; display: flex; flex-direction: column; gap: 2px;
+  .fcard.dark .fc-icon, .fcard.teal .fc-icon { background: rgba(243,243,241,0.08); }
+  .fc-icon svg { width: 22px; height: 22px; }
+  .fc-pill {
+    display: inline-flex; align-items: center;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.02em;
   }
-  .install-card .label { font-size: 16px; font-weight: 700; color: var(--ink); }
-  .install-card .availability { font-size: 12.5px; color: var(--ink-3); }
-  .install-card .arrow {
-    color: var(--ink-3);
-    transition: color .12s, transform .12s;
+  .fc-eyebrow {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+    color: var(--text-dim);
   }
-  .install-card:hover .arrow { color: var(--brand); transform: translateX(2px); }
+  .fc-title {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    line-height: 1.12;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .fc-body { font-size: 15px; line-height: 1.55; margin: 0 0 14px; }
+  .fc-body + .fc-body { margin-top: 0; }
+  .fc-spacer { flex: 1; }
+  .fc-cta {
+    align-self: flex-start;
+    margin-top: 24px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 14px; font-weight: 600;
+    transition: background .14s ease;
+  }
+  .fc-cta:hover { background: rgba(243,243,241,0.08); }
+  .fc-cta svg { width: 14px; height: 14px; }
 
-  /* ---------- Waitlist banner ---------- */
-  .waitlist {
-    margin: 64px 0 0;
-    background: linear-gradient(135deg, #1a1632 0%, #0f0d1f 100%);
-    color: white;
-    border-radius: 22px;
-    padding: 52px 48px;
-    position: relative; overflow: hidden;
+  /* Compact cards (middle + right) hide the body paragraphs by default */
+  .fcard.compact .fc-body.secondary { display: none; }
+  @media (max-width: 1080px) {
+    .fcard.compact .fc-body.secondary { display: block; }
   }
-  .waitlist::after {
-    content: '';
-    position: absolute; top: -120px; right: -120px;
-    width: 360px; height: 360px;
-    background: radial-gradient(circle, rgba(255,135,87,0.30) 0%, transparent 70%);
+
+  /* ---------- Install ---------- */
+  .install-band {
+    padding: 80px 0 64px;
+    border-top: 1px solid var(--line);
   }
-  .waitlist h3 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
-  .waitlist p { color: rgba(255,255,255,0.7); margin: 0 0 24px; max-width: 540px; }
-  .waitlist form { display: flex; gap: 8px; max-width: 480px; position: relative; }
-  .waitlist input[type=email] {
-    flex: 1;
-    padding: 13px 18px;
-    font-family: inherit; font-size: 14.5px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
-    color: white;
-    border-radius: 10px;
-    outline: none;
-    transition: border-color .12s, background .12s;
+  .install-band h2 {
+    font-size: clamp(28px, 3.4vw, 36px);
+    font-weight: 600;
+    letter-spacing: -0.7px;
+    margin: 0 0 12px;
+    text-wrap: balance;
   }
-  .waitlist input[type=email]::placeholder { color: rgba(255,255,255,0.45); }
-  .waitlist input[type=email]:focus { border-color: white; background: rgba(255,255,255,0.14); }
-  .waitlist button {
-    padding: 13px 24px;
-    font-family: inherit; font-size: 14.5px; font-weight: 600;
-    background: var(--brand); color: white;
-    border: none; border-radius: 10px;
+  .install-band p.lede { color: var(--text-dim); font-size: 16px; margin: 0 0 32px; max-width: 560px; }
+  .install-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 880px) { .install-grid { grid-template-columns: 1fr; } }
+  .install-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    display: flex; align-items: center; gap: 14px;
     cursor: pointer;
+    transition: border-color .14s ease, transform .14s ease, background .14s ease;
   }
-  .waitlist button:hover { background: var(--brand-2); }
-  .waitlist .status { margin-top: 14px; font-size: 13px; min-height: 1.2em; color: rgba(255,255,255,0.65); position: relative; }
-  .waitlist .status.ok { color: #9be5be; }
-  .waitlist .status.err { color: #ffb3a8; }
+  .install-card:hover { border-color: var(--line-strong); transform: translateY(-2px); background: var(--surface-2); }
+  .install-card .ico {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: inline-grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .ico-claude { background: linear-gradient(135deg, #d97757 0%, #e89178 100%); color: white; }
+  .ico-chatgpt { background: linear-gradient(135deg, #10a37f 0%, #19c69b 100%); color: white; }
+  .ico-cursor { background: linear-gradient(135deg, #2e2a36 0%, #4a4456 100%); color: white; }
+  .install-card .text { flex: 1; }
+  .install-card .label { font-size: 15px; font-weight: 600; color: var(--text); display: block; }
+  .install-card .sub { font-size: 12.5px; color: var(--text-dim); display: block; margin-top: 2px; }
+  .install-card .arrow { color: var(--text-dimmer); }
+
+  /* ---------- FAQ ---------- */
+  .faq { padding: 96px 0 64px; }
+  .faq-head { display: grid; grid-template-columns: 1fr 2fr; gap: 64px; margin-bottom: 48px; align-items: end; }
+  @media (max-width: 880px) { .faq-head { grid-template-columns: 1fr; gap: 16px; } }
+  .faq-eyebrow {
+    color: var(--brand);
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin: 0 0 12px;
+  }
+  .faq h2 {
+    font-size: clamp(32px, 4vw, 44px);
+    font-weight: 600;
+    letter-spacing: -0.88px;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .faq-list { border-top: 1px solid var(--line); }
+  details.faq-item {
+    border-bottom: 1px solid var(--line);
+    padding: 22px 0;
+  }
+  details.faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.2px;
+    color: var(--text);
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item .sign {
+    width: 24px; height: 24px;
+    display: inline-grid; place-items: center;
+    color: var(--text-dim);
+    transition: transform .2s ease;
+    flex-shrink: 0;
+  }
+  details.faq-item[open] .sign { transform: rotate(45deg); color: var(--text); }
+  details.faq-item .answer {
+    margin-top: 14px;
+    color: var(--text-dim);
+    font-size: 15.5px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+  details.faq-item .answer p { margin: 0 0 12px; }
+  details.faq-item .answer p:last-child { margin-bottom: 0; }
+  details.faq-item .answer code {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 1px 6px; border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+  details.faq-item .answer pre {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 14px 16px; border-radius: 10px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    color: var(--text);
+    margin: 12px 0 0;
+  }
 
   /* ---------- Footer ---------- */
-  footer { padding: 72px 0 56px; border-top: 1px solid var(--line); margin-top: 64px; }
-  footer .row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 32px; }
-  @media (max-width: 760px) { footer .row { grid-template-columns: 1fr 1fr; gap: 24px; } }
-  footer h4 { font-size: 14px; font-weight: 700; margin: 0 0 14px; color: var(--ink); }
-  footer .links a { display: block; font-size: 13.5px; color: var(--ink-2); padding: 4px 0; }
-  footer .links a:hover { color: var(--ink); }
-  footer .disclosure {
-    margin-top: 36px; padding-top: 24px;
+  footer {
+    padding: 56px 0 48px;
     border-top: 1px solid var(--line);
-    font-size: 12.5px; color: var(--ink-3); line-height: 1.55;
-    max-width: 880px;
+    color: var(--text-dim);
+    font-size: 13px;
   }
-  footer .disclosure p { margin: 0 0 10px; }
-  footer .disclosure strong { color: var(--ink-2); }
-  footer .col-brand { display: flex; flex-direction: column; gap: 6px; }
-  footer .col-brand .tag { color: var(--ink-3); font-size: 13px; }
-  footer .live-pill {
+  footer .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; flex-wrap: wrap; }
+  footer .col-brand { display: flex; flex-direction: column; gap: 10px; max-width: 460px; }
+  footer .col-brand .logo { color: var(--text); }
+  footer .col-brand .tag { color: var(--text-dim); font-size: 13px; }
+  footer .col-brand .live-pill {
     display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11.5px; color: var(--ink-3);
-    padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px;
-    margin-top: 10px;
+    font-size: 12px; color: var(--text-dim);
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
     width: fit-content;
   }
-  footer .live-pill .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+  footer .col-brand .live-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #2bbd7e;
+    box-shadow: 0 0 0 0 rgba(43,189,126,0.6);
     animation: dot-pulse 2.4s ease-out infinite;
   }
   @keyframes dot-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(31,157,107,0.6); }
-    100% { box-shadow: 0 0 0 8px rgba(31,157,107,0); }
+    0% { box-shadow: 0 0 0 0 rgba(43,189,126,0.55); }
+    100% { box-shadow: 0 0 0 8px rgba(43,189,126,0); }
   }
+  footer .links { display: flex; gap: 22px; flex-wrap: wrap; }
+  footer .links a { color: var(--text-dim); }
+  footer .links a:hover { color: var(--text); }
+  footer .disclosure {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--text-dimmer);
+    line-height: 1.6; max-width: 880px;
+  }
+  footer .disclosure strong { color: var(--text-dim); }
+
+  /* ---------- Toast for copied snippets ---------- */
+  .toast {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 14px; font-weight: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
 </style>
 </head>
 <body>
 
-<header>
-  <div class="container row">
-    <a class="logo" href="/">
-      <span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>
-      shopdeals
-    </a>
-    <nav class="nav">
-      <a href="#how">How it works</a>
-      <a href="#trust">Safety</a>
-      <a href="#install">Install</a>
-      <a class="nav-cta" href="#install">Get started</a>
+<!-- Reusable brand-mark SVG (price tag inside magnifying glass).
+     Uses currentColor so it tints with whatever color the parent sets. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="sd-mark" viewBox="0 0 100 100">
+      <circle cx="42" cy="42" r="28" fill="none" stroke="currentColor" stroke-width="8"/>
+      <line x1="62" y1="62" x2="86" y2="86" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+      <path d="M42 24 L54 24 L54 58 L42 70 L30 58 L30 36 Z" fill="currentColor"/>
+      <circle cx="42" cy="34" r="3" fill="#0e0f0c"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="nav-wrap">
+  <div class="container">
+    <nav class="bar">
+      <a class="logo" href="/">
+        <span class="brand-mark"><svg><use href="#sd-mark"/></svg></span>
+        shopdeals
+      </a>
+      <div class="nav-right">
+        <a class="nav-link docs" href="#faq">Docs</a>
+        <a class="nav-link" href="https://github.com/idanmann10/snap-ai" target="_blank" rel="noopener">GitHub</a>
+        <a class="nav-cta" href="#install" id="nav-add-claude">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#d97757" d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
+          Add to Claude
+        </a>
+      </div>
     </nav>
   </div>
-</header>
+</div>
 
 <section class="hero">
   <div class="container">
     <div class="hero-grid">
       <div>
-        <h1 class="hero-title">Your AI shopping agent.</h1>
-        <p class="hero-sub">Ask Claude or ChatGPT for what you want. shopdeals compares trusted sellers, surfaces working coupon codes, and hands back the best deal in seconds.</p>
-        <div class="cta-row">
-          <a class="btn-primary" href="#install">Get started free</a>
-          <a class="btn-ghost" href="#how">See how it works</a>
-        </div>
+        <h1 class="hero-title">Make Claude find the best deal.</h1>
       </div>
-
-      <div class="demo-card" aria-hidden="true">
-        <div class="demo-head">
-          <span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>
-          <span class="name">shopdeals</span>
+      <div class="hero-right">
+        <p class="hero-sub">An MCP server that gives your AI the ability to shop — compare sellers, watch prices, and apply coupons that actually work.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="#install" id="hero-add-claude">
+            <svg class="leaf" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
+            Add to Claude
+          </a>
+          <a class="btn btn-secondary" href="https://github.com/idanmann10/snap-ai" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.17-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.9 10.9 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.73.8 1.17 1.82 1.17 3.07 0 4.4-2.69 5.36-5.25 5.65.41.35.78 1.05.78 2.12v3.14c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+            View on GitHub
+          </a>
         </div>
-        <div class="demo-input">
-          <div class="input-fake">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-            <span>Find me the best deal on AirPods Pro</span>
-          </div>
-          <span class="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
-        </div>
-
-        <div class="progress-list">
-          <div class="progress-item done">
-            <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
-            Query received
-          </div>
-          <div class="progress-item done">
-            <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
-            Checking ${merchantCount} trusted sellers
-          </div>
-          <div class="progress-item active">
-            <span class="ring"></span>
-            Cross-matching coupon codes
-          </div>
-          <div class="progress-item pending">
-            <span class="ring"></span>
-            Best deal ready
-          </div>
-        </div>
-
-        <div class="seller-table">
-          <div class="header">
-            <div>Seller</div><div>Total</div><div>Code</div><div>Shipping</div>
-          </div>
-          <div class="row">
-            <div class="seller-name">
-              <img src="https://www.google.com/s2/favicons?domain=bestbuy.com&sz=64" alt="" />
-              <span class="seller-name-text">Best Buy</span>
-            </div>
-            <div>$199.99</div>
-            <div>—</div>
-            <div>Free</div>
-          </div>
-          <div class="row best">
-            <div class="seller-name">
-              <img src="https://www.google.com/s2/favicons?domain=amazon.com&sz=64" alt="" />
-              <span class="seller-name-text">Amazon<span class="badge">Best overall deal</span></span>
-            </div>
-            <div>$179.99</div>
-            <div>SAVE20</div>
-            <div>Free Prime</div>
-          </div>
-          <div class="row">
-            <div class="seller-name">
-              <img src="https://www.google.com/s2/favicons?domain=costco.com&sz=64" alt="" />
-              <span class="seller-name-text">Costco</span>
-            </div>
-            <div>$189.00</div>
-            <div>—</div>
-            <div>$4.99</div>
-          </div>
-        </div>
-
-        <button class="approve" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg>
-          Open at Amazon
-        </button>
+        <span class="hero-meta">
+          <span class="tri"></span>
+          Compatible with any MCP client
+        </span>
       </div>
     </div>
   </div>
 </section>
 
-<section id="how">
+<section class="partners">
   <div class="container">
-    <div class="feature-block">
-      <div class="chat-card">
-        <div class="head"><span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>shopdeals</div>
-        <div class="chat-bubble user">Find me a deal on AirPods Pro</div>
-        <div class="chat-bubble ai">
-          On it! Comparing ${merchantCount} sellers and our coupon catalog now.
-          <div class="typing"><span></span><span></span><span></span></div>
-        </div>
-      </div>
-      <div>
-        <h2>Ask in plain English.</h2>
-        <p class="lede">Tell your AI what you're shopping for — it pings shopdeals, which compares sellers across our catalog and live Google Shopping, then hands back the best buy.</p>
-        <ul class="bullet-list">
-          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Works inside Claude, ChatGPT, and Cursor</li>
-          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>No checkout takeover — you click the buy</li>
-          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Free forever for shoppers</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="feature-block reverse" id="trust">
-      <div class="seller-table" style="background: white;">
-        <div class="header">
-          <div>Seller</div><div>Total</div><div>Code</div><div>Shipping</div>
-        </div>
-        <div class="row">
-          <div class="seller-name">
-            <img src="https://www.google.com/s2/favicons?domain=bestbuy.com&sz=64" alt="" />
-            <span class="seller-name-text">Best Buy</span>
-          </div>
-          <div>$199.99</div>
-          <div>—</div>
-          <div>Free</div>
-        </div>
-        <div class="row best">
-          <div class="seller-name">
-            <img src="https://www.google.com/s2/favicons?domain=amazon.com&sz=64" alt="" />
-            <span class="seller-name-text">Amazon<span class="badge">Best overall deal</span></span>
-          </div>
-          <div>$179.99</div>
-          <div>SAVE20</div>
-          <div>Free Prime</div>
-        </div>
-        <div class="row">
-          <div class="seller-name">
-            <img src="https://www.google.com/s2/favicons?domain=costco.com&sz=64" alt="" />
-            <span class="seller-name-text">Costco</span>
-          </div>
-          <div>$189.00</div>
-          <div>—</div>
-          <div>$4.99</div>
-        </div>
-      </div>
-      <div>
-        <h2>See the full deal.</h2>
-        <p class="lede">shopdeals compares total price, shipping, returns policy, and the code that actually applies — so the agent's answer is something you can act on, not a guess.</p>
-        <ul class="bullet-list">
-          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Merchant-verified codes (no scrape guesses)</li>
-          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Total price with shipping &amp; tax visible</li>
-          <li class="bullet"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>Agent telemetry kills codes that stop working</li>
-        </ul>
-      </div>
+    <p class="partners-eyebrow">Works with the agents you already use</p>
+  </div>
+  <div class="marquee-track-outer">
+    <div class="marquee" id="marquee">
+      ${partnersRow()}
+      ${partnersRow()}
     </div>
   </div>
 </section>
 
-<section class="install-section" id="install">
+<section class="features" id="features">
   <div class="container">
-    <h2>Use it where you already work.</h2>
-    <p class="lede">Start instantly from your favorite AI workspace.</p>
+    <div class="features-header">
+      <p class="features-eyebrow">Built for AI agents</p>
+      <h2 class="features-title">Ten MCP tools that turn any chat into a shopping copilot.</h2>
+    </div>
+    <div class="features-grid">
+
+      <!-- Expanded card: Best deal -->
+      <article class="fcard expanded">
+        <div class="fc-top">
+          <span class="fc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+          </span>
+          <span class="fc-pill">find_best_deal</span>
+        </div>
+        <p class="fc-eyebrow">MCP tool</p>
+        <h3 class="fc-title">Always the lowest price.</h3>
+        <p class="fc-body">Across Amazon, Best Buy, Walmart, Target and more. The agent compares total cost (price + shipping + tax) and returns the cheapest with a direct affiliate link.</p>
+        <p class="fc-body">Live across ${merchantCount} merchants and ${dealCount} deals — updated continuously so the answer is fresh by the time the model answers.</p>
+        <div class="fc-spacer"></div>
+        <a class="fc-cta" href="#install">
+          See it in action
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+      </article>
+
+      <!-- Middle card: Watch prices -->
+      <article class="fcard dark compact">
+        <div class="fc-top">
+          <span class="fc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 3v18h18"/>
+              <path d="M7 14l4-4 4 4 5-5"/>
+            </svg>
+          </span>
+          <span class="fc-pill">Realtime</span>
+        </div>
+        <p class="fc-eyebrow">watch_price</p>
+        <h3 class="fc-title">Never miss a drop.</h3>
+        <p class="fc-body">Set a target price on anything. We'll email you when it hits, with the buy link ready to go.</p>
+        <p class="fc-body secondary">Price history backs every watch — the agent can show you how the deal compares to the last 90 days.</p>
+        <div class="fc-spacer"></div>
+      </article>
+
+      <!-- Right card: Coupons -->
+      <article class="fcard teal compact">
+        <div class="fc-top">
+          <span class="fc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a2 2 0 0 1 0 4v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2a2 2 0 0 1 0-4z"/>
+              <path d="M9 9h.01M15 15h.01M14 10l-4 4"/>
+            </svg>
+          </span>
+          <span class="fc-pill">362K codes</span>
+        </div>
+        <p class="fc-eyebrow">get_code_for_url</p>
+        <h3 class="fc-title">Every code that actually works.</h3>
+        <p class="fc-body">Built on 362K coupons across 82 affiliate networks. The agent picks the best stacking code for any cart.</p>
+        <p class="fc-body secondary">Telemetry from every agent run kills dead codes automatically — so the next request gets a working one.</p>
+        <div class="fc-spacer"></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<section class="install-band" id="install">
+  <div class="container">
+    <h2>Add it to your AI workspace.</h2>
+    <p class="lede">Click any card to copy the connection snippet. The endpoint is <code style="background:var(--surface);padding:2px 8px;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--brand);">https://mcp.shopdeals.sh/mcp</code></p>
     <div class="install-grid">
       <a class="install-card" href="#" id="install-claude">
         <span class="ico ico-claude">
-          <!-- Claude / Anthropic mark -->
-          <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
         </span>
         <div class="text">
           <span class="label">Add to Claude</span>
-          <span class="availability">Claude Desktop &amp; web — free</span>
+          <span class="sub">Claude Desktop config snippet</span>
         </div>
-        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </a>
       <a class="install-card" href="#" id="install-chatgpt">
         <span class="ico ico-chatgpt">
-          <!-- OpenAI / ChatGPT mark -->
-          <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M28.6 13.2a7.4 7.4 0 0 0-.7-6 7.4 7.4 0 0 0-8-3.6 7.4 7.4 0 0 0-5.6-2.5 7.4 7.4 0 0 0-7.1 5.1 7.4 7.4 0 0 0-4.9 3.6 7.4 7.4 0 0 0 .9 8.7 7.4 7.4 0 0 0 .7 6 7.4 7.4 0 0 0 8 3.6 7.4 7.4 0 0 0 5.6 2.5 7.4 7.4 0 0 0 7.1-5.1 7.4 7.4 0 0 0 4.9-3.6 7.4 7.4 0 0 0-.9-8.7zM17.3 28.4a5.5 5.5 0 0 1-3.5-1.3l.2-.1 5.8-3.4a1 1 0 0 0 .5-.8v-8.2l2.5 1.4v6.8a5.5 5.5 0 0 1-5.5 5.5zM5.4 23.3a5.5 5.5 0 0 1-.7-3.7l.2.1 5.8 3.4a1 1 0 0 0 1 0l7.1-4.1v2.9l-5.9 3.4a5.5 5.5 0 0 1-7.5-2zM3.9 11.1a5.5 5.5 0 0 1 2.9-2.4v6.9a1 1 0 0 0 .5.9l7 4-2.4 1.4-5.9-3.4a5.5 5.5 0 0 1-2-7.4zm20 4.6-7-4 2.4-1.4 5.9 3.4a5.5 5.5 0 0 1-.9 9.9v-6.9a1 1 0 0 0-.5-.9zm2.5-3.7-.2-.1-5.8-3.4a1 1 0 0 0-1 0l-7.1 4.1V9.7l5.9-3.4a5.5 5.5 0 0 1 8.2 5.7zM11.5 17l-2.5-1.4V8.7a5.5 5.5 0 0 1 9-4.2l-.2.1L12 8a1 1 0 0 0-.5.8V17zm1.3-2.9 3.2-1.8 3.2 1.8V18l-3.2 1.8-3.2-1.8z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M28.6 13.2a7.4 7.4 0 0 0-.7-6 7.4 7.4 0 0 0-8-3.6 7.4 7.4 0 0 0-5.6-2.5 7.4 7.4 0 0 0-7.1 5.1 7.4 7.4 0 0 0-4.9 3.6 7.4 7.4 0 0 0 .9 8.7 7.4 7.4 0 0 0 .7 6 7.4 7.4 0 0 0 8 3.6 7.4 7.4 0 0 0 5.6 2.5 7.4 7.4 0 0 0 7.1-5.1 7.4 7.4 0 0 0 4.9-3.6 7.4 7.4 0 0 0-.9-8.7zM17.3 28.4a5.5 5.5 0 0 1-3.5-1.3l.2-.1 5.8-3.4a1 1 0 0 0 .5-.8v-8.2l2.5 1.4v6.8a5.5 5.5 0 0 1-5.5 5.5zM5.4 23.3a5.5 5.5 0 0 1-.7-3.7l.2.1 5.8 3.4a1 1 0 0 0 1 0l7.1-4.1v2.9l-5.9 3.4a5.5 5.5 0 0 1-7.5-2zM3.9 11.1a5.5 5.5 0 0 1 2.9-2.4v6.9a1 1 0 0 0 .5.9l7 4-2.4 1.4-5.9-3.4a5.5 5.5 0 0 1-2-7.4zm20 4.6-7-4 2.4-1.4 5.9 3.4a5.5 5.5 0 0 1-.9 9.9v-6.9a1 1 0 0 0-.5-.9zm2.5-3.7-.2-.1-5.8-3.4a1 1 0 0 0-1 0l-7.1 4.1V9.7l5.9-3.4a5.5 5.5 0 0 1 8.2 5.7zM11.5 17l-2.5-1.4V8.7a5.5 5.5 0 0 1 9-4.2l-.2.1L12 8a1 1 0 0 0-.5.8V17zm1.3-2.9 3.2-1.8 3.2 1.8V18l-3.2 1.8-3.2-1.8z"/></svg>
         </span>
         <div class="text">
           <span class="label">Add to ChatGPT</span>
-          <span class="availability">via Custom Connectors · Plus / Pro</span>
+          <span class="sub">Custom connector URL · Plus / Pro</span>
         </div>
-        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </a>
       <a class="install-card" href="#" id="install-cursor">
         <span class="ico ico-cursor">
-          <!-- Cursor mark (stylized C) -->
-          <svg width="22" height="22" viewBox="0 0 32 32" fill="currentColor"><path d="M16 3 4 9.4v13.2L16 29l12-6.4V9.4L16 3zm0 2.3 9.6 5.1L16 15.6 6.4 10.4 16 5.3zm-10 7.5 9 4.8v9.8l-9-4.8v-9.8zm20 9.8-9 4.8v-9.8l9-4.8v9.8z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 3 4 9.4v13.2L16 29l12-6.4V9.4L16 3zm0 2.3 9.6 5.1L16 15.6 6.4 10.4 16 5.3zm-10 7.5 9 4.8v9.8l-9-4.8v-9.8zm20 9.8-9 4.8v-9.8l9-4.8v9.8z"/></svg>
         </span>
         <div class="text">
           <span class="label">Add to Cursor</span>
-          <span class="availability">macOS · Windows · Linux</span>
+          <span class="sub">mcp.json snippet · macOS · Win · Linux</span>
         </div>
-        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </a>
     </div>
   </div>
 </section>
 
-<section class="container">
-  <div class="waitlist" id="waitlist">
-    <h3>Get a heads-up when we launch big.</h3>
-    <p>We're shipping every few days. Drop your email — one note when the hosted endpoint opens up early access. No newsletter, no upsell.</p>
-    <form id="waitlist-form" novalidate>
-      <input id="waitlist-email" type="email" required placeholder="your@email.com" autocomplete="email" />
-      <button type="submit">Notify me</button>
-    </form>
-    <div class="status" id="waitlist-status" aria-live="polite"></div>
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="faq-head">
+      <div>
+        <p class="faq-eyebrow">FAQ</p>
+        <h2>Frequently asked.</h2>
+      </div>
+      <div></div>
+    </div>
+    <div class="faq-list">
+      ${faqItem('What is shopdeals?', `
+        <p>shopdeals is an MCP server — a small backend that plugs into AI assistants like Claude, ChatGPT, and Cursor and gives them ten new tools for shopping. With shopdeals connected, your agent can find the best deal across major retailers, watch prices, look up working coupon codes, and check price history.</p>
+        <p>It runs at <code>https://mcp.shopdeals.sh/mcp</code> and any MCP-compatible client can connect.</p>
+      `, true)}
+      ${faqItem('What is MCP?', `
+        <p>MCP (Model Context Protocol) is an open standard from Anthropic for giving AI assistants tools. An MCP server exposes a set of typed functions; an MCP client (Claude, Cursor, ChatGPT's custom connectors, Cline, Continue, etc.) calls them on the model's behalf during a conversation.</p>
+        <p>Think of MCP as the USB-C of AI agents — one cable, any tool.</p>
+      `)}
+      ${faqItem('Which AI assistants work with shopdeals?', `
+        <p>Anything that speaks MCP. Confirmed: Claude Desktop, Claude on the web, ChatGPT custom connectors (Plus / Pro), Cursor, Cline, Continue, Zed, and VS Code's MCP extension. If your client supports MCP, point it at <code>https://mcp.shopdeals.sh/mcp</code> and you're in.</p>
+      `)}
+      ${faqItem('Can the agent actually buy things, or just find them?', `
+        <p>Find — not buy. shopdeals returns the best deal with a direct (affiliate-tagged) buy link, but you click the link and complete checkout in the merchant's own site or app. We deliberately don't take over your wallet.</p>
+        <p>This is the safest pattern for agentic shopping today: the model does the research and surfaces the choice, you make the final purchase.</p>
+      `)}
+      ${faqItem('How do you get the codes?', `
+        <p>We're built on 362K coupon codes across 82 affiliate networks (CJ, Rakuten, Impact, Awin, Skimlinks, Sovrn, Pepperjam, and merchant-direct feeds). On top of that, every agent run sends back a <code>report_code_result</code> signal — when a code stops working, it's killed from the catalog within minutes.</p>
+      `)}
+      ${faqItem('How accurate are the prices?', `
+        <p>Prices come from a mix of merchant feeds, Google Shopping, and lightweight server-side fetches at query time. We compare total cost (price + shipping + tax estimate) so the agent's answer reflects what you'd actually pay at checkout, not just the sticker.</p>
+        <p>The catalog refreshes continuously — currently ${ingestStatus}.</p>
+      `)}
+      ${faqItem('Do you take affiliate commission?', `
+        <p>Yes — that's how shopdeals stays free for shoppers. When you buy through a link the agent surfaces, the retailer pays us a small commission at no extra cost to you. We never strip an existing creator or community attribution from a URL; we only add ours when none is present.</p>
+      `)}
+      ${faqItem('Is my data tracked?', `
+        <p>The MCP server doesn't store your queries, your identity, or anything you buy. The only data we keep is anonymized aggregate counts (how many times a deal was returned, how often a code worked) so we can rank better deals over time.</p>
+      `)}
+      ${faqItem('How do I add it to Claude Desktop?', `
+        <p>Open Claude Desktop, go to <strong>Settings → Developer → Edit Config</strong>, and add this block under <code>mcpServers</code>:</p>
+        <pre>{
+  "mcpServers": {
+    "shopdeals": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.shopdeals.sh/mcp"]
+    }
+  }
+}</pre>
+        <p>Restart Claude and the ten shopdeals tools will be available in any conversation.</p>
+      `)}
+      ${faqItem('Is it free?', `
+        <p>Free for shoppers, forever. We're funded by affiliate commission on successful purchases. There are no per-call fees, no rate limits worth mentioning, and no account required to use the MCP server.</p>
+      `)}
+    </div>
   </div>
 </section>
 
@@ -701,44 +710,31 @@ export function landingHtml(data: LandingData = {}): string {
     <div class="row">
       <div class="col-brand">
         <a class="logo" href="/">
-          <span class="logo-mark"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="sd-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f26b3a"/><stop offset="1" stop-color="#ff8757"/></linearGradient></defs><path d="M14.83 3.17a4 4 0 0 1 2.83 1.17l11 11a4 4 0 0 1 0 5.66l-8.83 8.83a4 4 0 0 1-5.66 0l-11-11A4 4 0 0 1 2 16V6.17a3 3 0 0 1 3-3h9.83Z" fill="url(#sd-grad)"/><circle cx="9.5" cy="9.5" r="2.5" fill="#fffdf9"/></svg></span>
+          <span class="brand-mark" style="color: var(--text);"><svg><use href="#sd-mark"/></svg></span>
           shopdeals
         </a>
-        <span class="tag">Your AI shopping agent.</span>
+        <span class="tag">The MCP server for shopping. Built for AI agents.</span>
         <span class="live-pill"><span class="dot"></span>${ingestStatus} · ${dealCount} deals</span>
       </div>
-      <div>
-        <h4>Product</h4>
-        <div class="links">
-          <a href="#how">How it works</a>
-          <a href="#trust">Safety</a>
-          <a href="#install">Install</a>
-        </div>
-      </div>
-      <div>
-        <h4>Company</h4>
-        <div class="links">
-          <a href="https://github.com/idanmann10/snap-ai">GitHub</a>
-          <a href="mailto:hello@shopdeals.sh">Contact</a>
-        </div>
-      </div>
-      <div>
-        <h4>Developers</h4>
-        <div class="links">
-          <a href="/api">API</a>
-          <a href="/healthz">Status</a>
-        </div>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/idanmann10/snap-ai" target="_blank" rel="noopener">GitHub</a>
+        <a href="mailto:hello@shopdeals.sh">Contact</a>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
       </div>
     </div>
     <div class="disclosure">
-      <p><strong>Affiliate disclosure:</strong> shopdeals is a participant in the Amazon Services LLC Associates Program and Skimlinks. Many of the buy links we hand your AI are affiliate links — when you purchase through them, we earn a small commission at no extra cost to you. We never strip an existing creator or community attribution from a URL; we add ours only when none is present.</p>
-      <p><strong>Privacy:</strong> the MCP server doesn't store your queries, your identity, or anything you buy. The only data we keep is anonymized aggregate counts (how many times a deal was returned, how often agents reported a code worked) so we can rank better deals over time.</p>
+      <p><strong>Affiliate disclosure:</strong> shopdeals is a participant in the Amazon Services LLC Associates Program and other affiliate networks. Many of the buy links surfaced by the agent are affiliate links — when you purchase through them, we earn a small commission at no extra cost to you.</p>
+      <p>&copy; ${new Date().getFullYear()} shopdeals. All rights reserved.</p>
     </div>
   </div>
 </footer>
 
-<!-- Modal openers for install snippets. Lightweight: just copy the snippet
-     to clipboard and notify, no real modal. -->
+<div class="toast" id="toast">Copied to clipboard</div>
+
 <script>
   const SNIPPETS = {
     'install-claude': \`{
@@ -758,6 +754,14 @@ export function landingHtml(data: LandingData = {}): string {
   }
 }\`,
   };
+  const toast = document.getElementById('toast');
+  function flashToast(msg) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(flashToast._t);
+    flashToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+  }
   for (const [id, snippet] of Object.entries(SNIPPETS)) {
     const el = document.getElementById(id);
     if (!el) continue;
@@ -765,53 +769,55 @@ export function landingHtml(data: LandingData = {}): string {
       e.preventDefault();
       try {
         await navigator.clipboard.writeText(snippet);
-        const label = el.querySelector('.label');
-        const orig = label.textContent;
-        label.textContent = 'Copied to clipboard';
-        setTimeout(() => { label.textContent = orig; }, 1400);
+        flashToast(id === 'install-chatgpt' ? 'URL copied' : 'Snippet copied');
       } catch {
         alert(snippet);
       }
     });
   }
-
-  // Waitlist submit
-  const form = document.getElementById('waitlist-form');
-  const statusEl = document.getElementById('waitlist-status');
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const emailInput = document.getElementById('waitlist-email');
-    const email = (emailInput && emailInput.value || '').trim();
-    if (!email || !email.includes('@')) {
-      statusEl.textContent = 'Need a valid email.';
-      statusEl.className = 'status err';
-      return;
-    }
-    statusEl.textContent = 'Sending…';
-    statusEl.className = 'status';
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, source: 'landing', referrer: document.referrer || null }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok) {
-        statusEl.textContent = body.alreadyOnList ? "You're already on the list." : "You're in. We'll be in touch.";
-        statusEl.className = 'status ok';
-        if (emailInput) emailInput.value = '';
-      } else {
-        statusEl.textContent = body.error || 'Something went wrong. Try again?';
-        statusEl.className = 'status err';
-      }
-    } catch {
-      statusEl.textContent = 'Network blip. Try again?';
-      statusEl.className = 'status err';
-    }
-  });
+  // "Add to Claude" buttons in nav + hero also copy the Claude snippet.
+  for (const btnId of ['nav-add-claude', 'hero-add-claude']) {
+    const btn = document.getElementById(btnId);
+    if (!btn) continue;
+    btn.addEventListener('click', async (e) => {
+      // Let it scroll, AND copy the snippet so the user sees the toast.
+      try {
+        await navigator.clipboard.writeText(SNIPPETS['install-claude']);
+        flashToast('Snippet copied — paste into Claude Desktop config');
+      } catch {}
+    });
+  }
 </script>
 </body>
 </html>`;
+}
+
+/** Partner logos for the marquee. Each item is a wordmark or a small SVG mark.
+ *  We dimm them via CSS (rgba(243,243,241,0.5)) so they read as ambient context,
+ *  not endorsements. */
+function partnersRow(): string {
+  const items = [
+    { name: 'OpenAI', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">OpenAI</text></svg>' },
+    { name: 'Claude', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Claude</text></svg>' },
+    { name: 'Cursor', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Cursor</text></svg>' },
+    { name: 'Manus', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Manus</text></svg>' },
+    { name: 'VS Code', svg: '<svg viewBox="0 0 110 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">VS Code</text></svg>' },
+    { name: 'GitHub Copilot', svg: '<svg viewBox="0 0 170 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">GitHub Copilot</text></svg>' },
+    { name: 'Gemini', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Gemini</text></svg>' },
+    { name: 'Perplexity', svg: '<svg viewBox="0 0 130 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Perplexity</text></svg>' },
+    { name: 'Cline', svg: '<svg viewBox="0 0 80 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Cline</text></svg>' },
+  ];
+  return items.map(i => `<span class="logo-item" style="color: rgba(243,243,241,0.5);">${i.svg}</span>`).join('');
+}
+
+function faqItem(question: string, answerHtml: string, open = false): string {
+  return `<details class="faq-item"${open ? ' open' : ''}>
+    <summary>
+      <span>${question}</span>
+      <span class="sign"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+    </summary>
+    <div class="answer">${answerHtml.trim()}</div>
+  </details>`;
 }
 
 function formatThousands(n: number | undefined): string {
