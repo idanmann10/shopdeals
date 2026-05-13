@@ -34,7 +34,7 @@ The Slickdeals adapter is **free** and requires no env config — it just runs.
 
 In the Railway project that contains the web service:
 
-1. Click **+ New** → **GitHub Repo** → pick the same `idanmann10/Snap-AI`
+1. Click **+ New** → **GitHub Repo** → pick the same `idanmann10/shopdeals`
    repo. Railway will use the same Dockerfile.
 2. Open the new service's **Settings**:
    - **Service name**: `shopdeals-ingest`

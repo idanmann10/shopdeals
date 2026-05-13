@@ -40,37 +40,59 @@ export class RateLimiter {
   constructor(private readonly config: RateLimitConfig) {}
 
   /**
-   * Consume one token for `key`. Throws an `McpError` when the bucket is
-   * empty. Use this at the top of expensive tool handlers.
+   * Try to consume one token. Returns the outcome so callers above the MCP
+   * protocol boundary (HTTP middleware) can return a proper 429 with a
+   * Retry-After header instead of throwing into the JSON-RPC layer.
    */
-  consumeOrThrow(key: string, toolName: string): void {
+  consume(key: string): { ok: true } | { ok: false; retryAfterSec: number } {
     const now = Date.now();
     let bucket = this.buckets.get(key);
     if (!bucket) {
       bucket = { tokens: this.config.capacity, lastRefillMs: now };
       this.buckets.set(key, bucket);
     } else {
-      // Refill since last touch.
       const elapsedSec = (now - bucket.lastRefillMs) / 1000;
       const refilled = elapsedSec * this.config.refillPerSecond;
       bucket.tokens = Math.min(this.config.capacity, bucket.tokens + refilled);
       bucket.lastRefillMs = now;
     }
     if (bucket.tokens < 1) {
-      const waitSec = Math.ceil((1 - bucket.tokens) / this.config.refillPerSecond);
+      const retryAfterSec = Math.ceil((1 - bucket.tokens) / this.config.refillPerSecond);
+      return { ok: false, retryAfterSec };
+    }
+    bucket.tokens -= 1;
+    return { ok: true };
+  }
+
+  /**
+   * Consume one token for `key`. Throws an `McpError` when the bucket is
+   * empty. Use this at the top of expensive tool handlers.
+   */
+  consumeOrThrow(key: string, toolName: string): void {
+    const result = this.consume(key);
+    if (!result.ok) {
       throw new McpError(
         ErrorCode.InvalidRequest,
         `rate limit: ${toolName} allows ${this.config.capacity} request(s) every ${Math.round(
           this.config.capacity / this.config.refillPerSecond,
-        )}s — retry in ${waitSec}s`,
+        )}s — retry in ${result.retryAfterSec}s`,
       );
     }
-    bucket.tokens -= 1;
   }
 
   /** Test-only — wipe the buckets. */
   reset(): void {
     this.buckets.clear();
+  }
+
+  /** Read-only snapshot of the configured ceiling, for use in user-facing
+   *  messages and landing-page badges. */
+  describe(): { capacity: number; refillPerSecond: number; perMinute: number } {
+    return {
+      capacity: this.config.capacity,
+      refillPerSecond: this.config.refillPerSecond,
+      perMinute: Math.round(this.config.refillPerSecond * 60),
+    };
   }
 }
 
@@ -85,4 +107,19 @@ export class RateLimiter {
 export const serpApiRateLimiter = new RateLimiter({
   capacity: 20,
   refillPerSecond: 0.5,
+});
+
+/**
+ * Global per-client throttle on the `/mcp` endpoint. Cheap protection
+ * against runaway loops and casual scraping — sized so a normal agent
+ * conversation (a few tool calls per minute) never trips it, while
+ * abusive callers get a clean 429 with `Retry-After`.
+ *
+ * Defaults: 60 calls per 60 seconds (1 req/sec sustained), with a burst
+ * capacity of 60 so a fresh client doesn't get rate-limited on its first
+ * tools/list + initial tool call.
+ */
+export const globalMcpRateLimiter = new RateLimiter({
+  capacity: 60,
+  refillPerSecond: 1,
 });

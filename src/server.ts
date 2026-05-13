@@ -13,6 +13,7 @@ import { mountMcp } from './mcp/transport.ts';
 import type { McpContext } from './mcp/context.ts';
 import { authMiddleware } from './middleware/auth.ts';
 import { usageMiddleware } from './middleware/usage.ts';
+import { globalMcpRateLimiter } from './lib/rate-limit.ts';
 import { registerStripeWebhook } from './billing/webhook.ts';
 import { db } from './db/client.ts';
 import { env } from './lib/env.ts';
@@ -60,7 +61,7 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
     c.json({
       name: 'shopdeals',
       mcp: '/mcp',
-      docs: 'https://github.com/idanmann10/Snap-AI',
+      docs: 'https://github.com/idanmann10/shopdeals',
     }),
   );
 
@@ -74,6 +75,30 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
   // Auth + usage metering apply to everything below.
   app.use('*', authMiddleware({ allowAnonymous }));
   app.use('*', usageMiddleware());
+
+  // Global rate limit on /mcp* — guards against runaway loops and scraping
+  // even before the request reaches the MCP protocol layer. Returns a clean
+  // 429 with `Retry-After` so well-behaved clients back off.
+  app.use('/mcp*', async (c: Context, next: Next) => {
+    const principal = c.get('principal') as AuthPrincipal | undefined;
+    const key = principal?.clientHash ?? c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'anonymous';
+    const result = globalMcpRateLimiter.consume(key);
+    if (!result.ok) {
+      return c.json(
+        {
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: `Rate limit exceeded — retry in ${result.retryAfterSec}s. The hosted shopdeals server allows 60 calls/min per client.`,
+          },
+          id: null,
+        },
+        429,
+        { 'Retry-After': String(result.retryAfterSec) },
+      );
+    }
+    await next();
+  });
 
   mountMcp(app, {
     resolveContext:

@@ -253,19 +253,27 @@ export function landingHtml(data: LandingData = {}): string {
   .url-row.copied .url-copy { color: #2bbd7e; border-color: rgba(43,189,126,0.5); }
 
   /* ---------- Search demo (mock agent conversation) ---------- */
-  .demo { padding: 56px 0 56px; }
+  .demo { padding: 56px 0 64px; }
+  .demo-eyebrow {
+    text-align: center;
+    color: var(--text-dimmer);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 auto 22px;
+  }
   .demo-window {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 14px;
-    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(243,243,241,0.02) inset;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.55);
     overflow: hidden;
-    max-width: 920px;
+    max-width: 880px;
     margin: 0 auto;
   }
   .demo-chrome {
     display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px;
+    padding: 11px 14px;
     border-bottom: 1px solid var(--line);
     background: var(--surface-2);
     font-size: 12px; color: var(--text-dim);
@@ -273,49 +281,98 @@ export function landingHtml(data: LandingData = {}): string {
   .demo-chrome .dots { display: inline-flex; gap: 6px; }
   .demo-chrome .dots span {
     width: 11px; height: 11px; border-radius: 50%;
-    background: rgba(243,243,241,0.16);
+    background: rgba(243,243,241,0.14);
   }
   .demo-chrome .title {
-    display: inline-flex; align-items: center; gap: 8px;
-    margin-left: 6px; font-weight: 500; color: var(--text);
+    flex: 1; text-align: center;
+    font-weight: 500; color: var(--text); font-size: 13px;
   }
   .demo-chrome .title .pill {
     font-size: 10.5px; font-weight: 600;
     color: var(--text-dim);
-    background: rgba(243,243,241,0.06);
+    background: rgba(243,243,241,0.05);
     border: 1px solid var(--line);
     padding: 2px 7px; border-radius: 999px;
+    margin-left: 8px;
     letter-spacing: 0.02em;
   }
-  .demo-body { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
-  .msg { display: flex; gap: 12px; align-items: flex-start; }
+  .demo-chrome .model {
+    color: var(--text-dimmer);
+    font-size: 11.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .demo-body {
+    padding: 24px 28px 28px;
+    display: flex; flex-direction: column; gap: 22px;
+    background:
+      radial-gradient(800px 200px at 50% -40px, rgba(217,119,87,0.06), transparent 60%),
+      var(--surface);
+  }
+  @media (max-width: 720px) { .demo-body { padding: 18px 16px; } }
+
+  .msg { display: flex; gap: 14px; align-items: flex-start; }
   .msg .avatar {
-    width: 26px; height: 26px; border-radius: 6px;
+    width: 30px; height: 30px; border-radius: 50%;
     flex-shrink: 0;
     display: inline-grid; place-items: center;
-    font-size: 11px; font-weight: 700;
+    font-size: 12.5px; font-weight: 600;
     letter-spacing: 0.02em;
+    margin-top: 1px;
   }
-  .msg.user .avatar { background: rgba(243,243,241,0.10); color: var(--text); }
-  .msg.assistant .avatar { background: rgba(217,119,87,0.18); color: var(--claude); border: 1px solid rgba(217,119,87,0.32); }
+  .msg.user .avatar {
+    background: linear-gradient(135deg, #565970 0%, #3a3c4f 100%);
+    color: white;
+  }
+  .msg.assistant .avatar {
+    background: linear-gradient(135deg, #d97757 0%, #b65d40 100%);
+    color: white;
+  }
+  .msg.assistant .avatar svg { width: 14px; height: 14px; fill: currentColor; }
+  .msg .col { flex: 1; min-width: 0; }
   .msg .who {
-    font-size: 12px; font-weight: 600; color: var(--text);
-    margin-bottom: 4px;
-    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--text);
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
   }
   .msg .who .tag {
-    font-size: 10.5px; font-weight: 500;
+    font-size: 11px; font-weight: 500;
     color: var(--text-dimmer);
-    background: rgba(243,243,241,0.05);
-    padding: 1px 6px; border-radius: 4px;
   }
-  .msg .text { font-size: 14.5px; line-height: 1.55; color: var(--text); }
+  .msg .text {
+    font-size: 15px; line-height: 1.6; color: var(--text);
+    letter-spacing: -0.005em;
+  }
+  .msg .text + .text { margin-top: 8px; }
   .msg .text strong { font-weight: 600; color: var(--text); }
-  .msg .text em { font-style: normal; color: var(--brand-2); font-weight: 500; }
-  .msg .text a { color: var(--brand-2); text-decoration: underline; text-underline-offset: 2px; }
+  .msg .text a { color: var(--brand); text-decoration: none; border-bottom: 1px solid rgba(242,107,58,0.4); }
+  .msg .text a:hover { border-bottom-color: var(--brand); }
   .msg.user .text { color: rgba(243,243,241,0.92); }
+  .msg .text .inline-code {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .msg .meta-line {
+    font-size: 12.5px; color: var(--text-dim);
+    margin: 8px 0;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .msg .meta-line .spinner {
+    width: 11px; height: 11px;
+    border: 1.5px solid var(--text-dimmer);
+    border-top-color: var(--text);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    display: inline-block;
+  }
+  .msg .meta-line .check { color: #2bbd7e; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .msg .meta-line .spinner { animation: none; } }
 
-  /* Tool-call block */
+  /* Tool-call block — collapsible */
   .tool-call {
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -323,22 +380,29 @@ export function landingHtml(data: LandingData = {}): string {
     background: var(--bg);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12.5px;
+    margin-top: 8px;
   }
   .tool-call .tc-head {
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px;
-    background: rgba(243,243,241,0.03);
+    padding: 9px 12px;
+    background: rgba(243,243,241,0.02);
     border-bottom: 1px solid var(--line);
     color: var(--text-dim);
     font-size: 12px;
   }
-  .tool-call .tc-head .dot { width: 6px; height: 6px; border-radius: 50%; background: #2bbd7e; }
+  .tool-call .tc-head .chev {
+    width: 12px; height: 12px;
+    color: var(--text-dimmer);
+  }
   .tool-call .tc-head .name { color: var(--text); font-weight: 600; }
+  .tool-call .tc-head .arrow-svg { width: 10px; height: 10px; color: var(--text-dimmer); }
+  .tool-call .tc-head .upstream { color: var(--text-dimmer); }
   .tool-call .tc-head .ms { margin-left: auto; color: var(--text-dimmer); font-size: 11.5px; }
-  .tool-call .tc-body { padding: 12px 14px; color: var(--text-dim); line-height: 1.5; }
+  .tool-call .tc-body { padding: 12px 14px; color: var(--text-dim); line-height: 1.55; }
   .tool-call .tc-body .k { color: rgba(243,243,241,0.55); }
   .tool-call .tc-body .s { color: #9ecbff; }
   .tool-call .tc-body .n { color: #ffb86b; }
+  .tool-call .tc-body .b { color: #c0a3ff; }
 
   /* Tool-result table */
   .deal-table {
@@ -559,36 +623,163 @@ export function landingHtml(data: LandingData = {}): string {
     margin: 0 0 12px;
     text-wrap: balance;
   }
-  .install-band p.lede { color: var(--text-dim); font-size: 16px; margin: 0 0 32px; max-width: 560px; }
+  .install-band p.lede { color: var(--text-dim); font-size: 16px; margin: 0 0 32px; max-width: 600px; }
+  .install-band .install-foot {
+    color: var(--text-dim); font-size: 13.5px;
+    margin: 22px 0 0; max-width: 600px;
+  }
+  .install-band .install-foot code {
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 1px 7px; border-radius: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px; color: var(--text);
+  }
   .install-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   @media (max-width: 880px) { .install-grid { grid-template-columns: 1fr; } }
+  button.install-card {
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
+    width: 100%;
+  }
   .install-card {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 22px;
+    padding: 18px 20px;
     display: flex; align-items: center; gap: 14px;
     cursor: pointer;
     position: relative;
-    overflow: hidden;
-    transition: border-color .2s ease, transform .2s ease, background .2s ease, box-shadow .2s ease;
+    transition: border-color .15s ease, background .15s ease;
+    color: inherit;
+    text-decoration: none;
   }
   .install-card:hover { border-color: var(--line-strong); background: var(--surface-2); }
-  .install-card .arrow { transition: transform .15s ease; }
-  .install-card:hover .arrow { transform: translateX(2px); }
+  .install-card .arrow { transition: transform .15s ease; color: var(--text-dimmer); }
+  .install-card:hover .arrow { transform: translateX(2px); color: var(--text-dim); }
   .install-card.copied { border-color: rgba(43,189,126,0.6); }
   .install-card .ico {
-    width: 40px; height: 40px; border-radius: 10px;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: rgba(243,243,241,0.04);
+    border: 1px solid var(--line);
     display: inline-grid; place-items: center;
     flex-shrink: 0;
+    color: var(--text);
   }
-  .ico-claude { background: linear-gradient(135deg, #d97757 0%, #e89178 100%); color: white; }
-  .ico-chatgpt { background: linear-gradient(135deg, #10a37f 0%, #19c69b 100%); color: white; }
-  .ico-cursor { background: linear-gradient(135deg, #2e2a36 0%, #4a4456 100%); color: white; }
-  .install-card .text { flex: 1; }
+  .install-card .ico svg { width: 20px; height: 20px; }
+  .install-card .text { flex: 1; min-width: 0; }
   .install-card .label { font-size: 15px; font-weight: 600; color: var(--text); display: block; }
-  .install-card .sub { font-size: 12.5px; color: var(--text-dim); display: block; margin-top: 2px; }
-  .install-card .arrow { color: var(--text-dimmer); }
+  .install-card .sub { font-size: 12.5px; color: var(--text-dim); display: block; margin-top: 3px; }
+  .install-card .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+    color: var(--brand);
+    background: rgba(242,107,58,0.10);
+    border: 1px solid rgba(242,107,58,0.22);
+    padding: 2px 6px; border-radius: 999px;
+    margin-left: 8px;
+    vertical-align: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Snippet modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.62);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 200;
+    padding: 24px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    max-width: 560px; width: 100%;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+  .modal .m-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .modal .m-head .m-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; font-weight: 600; color: var(--text);
+  }
+  .modal .m-head .m-title .ico {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: rgba(243,243,241,0.04);
+    border: 1px solid var(--line);
+    display: inline-grid; place-items: center;
+  }
+  .modal .m-head .m-title .ico svg { width: 14px; height: 14px; }
+  .modal .m-close {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 22px; line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .modal .m-close:hover { background: rgba(243,243,241,0.06); color: var(--text); }
+  .modal .m-body { padding: 18px; }
+  .modal .m-step { font-size: 13px; color: var(--text-dim); margin: 0 0 8px; }
+  .modal .m-step strong { color: var(--text); font-weight: 600; }
+  .modal ol.m-list {
+    margin: 0 0 16px; padding-left: 20px;
+    color: var(--text-dim); font-size: 13.5px; line-height: 1.7;
+  }
+  .modal ol.m-list strong { color: var(--text); font-weight: 600; }
+  .modal ol.m-list code {
+    background: var(--bg); border: 1px solid var(--line);
+    padding: 1px 6px; border-radius: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .modal pre {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 6px 0 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+    overflow-x: auto;
+    line-height: 1.55;
+  }
+  .modal .m-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .modal .m-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--brand); color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: none;
+    transition: background .14s ease;
+  }
+  .modal .m-btn:hover { background: var(--brand-2); }
+  .modal .m-btn svg { width: 13px; height: 13px; }
+  .modal .m-btn.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  .modal .m-btn.secondary:hover { background: var(--surface-2); border-color: var(--line-strong); }
+  .modal .m-btn.secondary.copied { color: #2bbd7e; border-color: rgba(43,189,126,0.5); }
 
   /* ---------- FAQ ---------- */
   .faq { padding: 96px 0 64px; }
@@ -737,7 +928,7 @@ export function landingHtml(data: LandingData = {}): string {
       <div class="nav-right">
         <a class="nav-link" href="#features">Tools</a>
         <a class="nav-link docs" href="#faq">Docs</a>
-        <a class="nav-link" href="https://github.com/idanmann10/Snap-AI" target="_blank" rel="noopener">GitHub</a>
+        <a class="nav-link" href="https://github.com/idanmann10/shopdeals" target="_blank" rel="noopener">GitHub</a>
         <a class="nav-cta" href="#install">Get the URL</a>
       </div>
     </nav>
@@ -764,9 +955,9 @@ export function landingHtml(data: LandingData = {}): string {
         <div class="hero-foot">
           <span class="hero-meta">
             <span class="tri"></span>
-            Compatible with any MCP client
+            Compatible with any MCP client · 60 calls/min · no API key
           </span>
-          <a class="ghost-link" href="https://github.com/idanmann10/Snap-AI" target="_blank" rel="noopener">
+          <a class="ghost-link" href="https://github.com/idanmann10/shopdeals" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.17-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.9 10.9 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.73.8 1.17 1.82 1.17 3.07 0 4.4-2.69 5.36-5.25 5.65.41.35.78 1.05.78 2.12v3.14c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
             View on GitHub
           </a>
@@ -778,49 +969,48 @@ export function landingHtml(data: LandingData = {}): string {
 
 <section class="demo" id="search-demo">
   <div class="container">
+    <p class="demo-eyebrow reveal">A real example</p>
     <div class="demo-window reveal">
       <div class="demo-chrome">
         <span class="dots"><span></span><span></span><span></span></span>
-        <span class="title">
-          shopdeals
-          <span class="pill">MCP · find_best_deal</span>
-        </span>
+        <span class="title">Claude<span class="pill">shopdeals MCP</span></span>
+        <span class="model">claude-opus-4.7</span>
       </div>
       <div class="demo-body">
+
         <div class="msg user">
-          <span class="avatar">You</span>
-          <div>
-            <div class="who">You <span class="tag">just now</span></div>
-            <div class="text">What's the best deal on the Sony WH-1000XM5 headphones right now?</div>
+          <span class="avatar">IM</span>
+          <div class="col">
+            <div class="who">You</div>
+            <div class="text">What's the best deal on Sony WH-1000XM5 headphones right now? I'd rather not pay more than $300.</div>
           </div>
         </div>
 
         <div class="msg assistant">
-          <span class="avatar">C</span>
-          <div style="flex:1; min-width: 0;">
-            <div class="who">Claude <span class="tag">claude-opus-4.7</span></div>
-            <div class="text" style="margin-bottom: 10px; color: var(--text-dim);">Let me check across sellers — comparing total price including shipping and applicable coupons.</div>
+          <span class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.304 3.541h-3.672l6.696 16.918H24Zm-10.608 0L0 20.459h3.744l1.37-3.553h7.005l1.369 3.553h3.744L10.536 3.541Zm-.371 10.223L8.616 7.82l2.291 5.945Z"/></svg></span>
+          <div class="col">
+            <div class="who">Claude</div>
+            <div class="text">Let me check across sellers and apply working coupons.</div>
+
             <div class="tool-call">
               <div class="tc-head">
-                <span class="dot"></span>
+                <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
                 <span class="name">find_best_deal</span>
-                <span>called shopdeals</span>
+                <svg class="arrow-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                <span class="upstream">shopdeals · MCP</span>
                 <span class="ms">412 ms</span>
               </div>
               <div class="tc-body">
                 <div>{</div>
-                <div style="padding-left: 16px;"><span class="k">"query"</span>: <span class="s">"Sony WH-1000XM5"</span>,</div>
-                <div style="padding-left: 16px;"><span class="k">"maxResults"</span>: <span class="n">3</span></div>
+                <div style="padding-left: 16px;"><span class="k">query</span>: <span class="s">"Sony WH-1000XM5"</span>,</div>
+                <div style="padding-left: 16px;"><span class="k">maxPriceCents</span>: <span class="n">30000</span>,</div>
+                <div style="padding-left: 16px;"><span class="k">applyCoupons</span>: <span class="b">true</span></div>
                 <div>}</div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="msg assistant">
-          <span class="avatar">C</span>
-          <div style="flex:1; min-width: 0;">
-            <div class="who">Tool result <span class="tag">3 sellers compared</span></div>
+            <div class="meta-line"><span class="check">✓</span> 3 sellers · 49 trusted merchants checked · prices verified 4 min ago</div>
+
             <table class="deal-table" role="table">
               <thead>
                 <tr><th>Seller</th><th>Price</th><th>Total</th><th>Code</th></tr>
@@ -836,16 +1026,16 @@ export function landingHtml(data: LandingData = {}): string {
                 <tr><td>Target</td><td>$329.99</td><td>$349.98</td><td>—</td></tr>
               </tbody>
             </table>
+
+            <div class="text" style="margin-top: 16px;">
+              The best deal is <strong>Amazon at $298.00</strong> — comfortably under your $300 cap, $51 below Best Buy, and the <span class="inline-code">SAVE25</span> code stacks at checkout (verified working 4 minutes ago). It ships free with Prime.
+            </div>
+            <div class="text" style="margin-top: 12px;">
+              <a href="#install">Open the buy link →</a>
+            </div>
           </div>
         </div>
 
-        <div class="msg assistant">
-          <span class="avatar">C</span>
-          <div>
-            <div class="who">Claude</div>
-            <div class="text">Best deal is <strong>Amazon at $298.00</strong> — $51 below Best Buy, free Prime shipping, and the <em>SAVE25</em> code stacks at checkout. Confirmed working 4 minutes ago. <a href="#install">Get the buy link →</a></div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -941,41 +1131,58 @@ export function landingHtml(data: LandingData = {}): string {
 <section class="install-band" id="install">
   <div class="container">
     <h2 class="reveal">Add it to your AI workspace.</h2>
-    <p class="lede reveal d1">Click any card to copy the connection snippet. The endpoint is <code style="background:var(--surface);padding:2px 8px;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--brand);">https://mcp.shopdeals.sh/mcp</code></p>
+    <p class="lede reveal d1">Free, open, rate-limited at 60 calls/minute. Pick your client and you're set up in under 30 seconds.</p>
     <div class="install-grid reveal d2">
-      <a class="install-card" href="#" id="install-claude">
-        <span class="ico ico-claude">
-          <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
+      <button class="install-card" type="button" data-client="cursor">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.925.0461c-.123-.0288-.249-.0594-.4116.0337L1.0962 6.0683c-.0846.0488-.1547.119-.2034.2036-.0488.0846-.0744.1804-.0746.278v11.9075c.0002.0976.0258.1935.0746.2781.0487.0846.1188.1547.2034.2036L11.521 23.918l.0006.0003c.045.025.083.0455.1257.0589.0419.0131.0867.0193.1335.0228h.0011a1.06 1.06 0 0 0 .1334-.0228c.0427-.0134.0808-.0339.1257-.0589l.0006-.0003 10.4248-6.0349c.0847-.0488.155-.1188.2038-.2034.0489-.0846.0746-.1804.0749-.2781V6.3504c-.0003-.0977-.026-.1936-.0749-.2782s-.1191-.1546-.2038-.2034L12.3372.0798a.522.522 0 0 0-.4122-.0337zM12.0163.7917l9.7905 5.6669-9.7905 5.6669L2.2257 6.4586l9.7906-5.6669zM1.7757 7.4083l9.7906 5.6669v11.3338L1.7757 18.7421V7.4083zm20.4467 0v11.3338l-9.7905 5.6669V13.0752l9.7905-5.6669z"/></svg>
+        </span>
+        <div class="text">
+          <span class="label">Add to Cursor<span class="badge">1-click</span></span>
+          <span class="sub">Opens Cursor and installs automatically</span>
+        </div>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </button>
+      <button class="install-card" type="button" data-client="claude">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.304 3.541h-3.672l6.696 16.918H24Zm-10.608 0L0 20.459h3.744l1.37-3.553h7.005l1.369 3.553h3.744L10.536 3.541Zm-.371 10.223L8.616 7.82l2.291 5.945Z"/></svg>
         </span>
         <div class="text">
           <span class="label">Add to Claude</span>
-          <span class="sub">Claude Desktop config snippet</span>
+          <span class="sub">Copy snippet for Claude Desktop config</span>
         </div>
-        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-      </a>
-      <a class="install-card" href="#" id="install-chatgpt">
-        <span class="ico ico-chatgpt">
-          <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M28.6 13.2a7.4 7.4 0 0 0-.7-6 7.4 7.4 0 0 0-8-3.6 7.4 7.4 0 0 0-5.6-2.5 7.4 7.4 0 0 0-7.1 5.1 7.4 7.4 0 0 0-4.9 3.6 7.4 7.4 0 0 0 .9 8.7 7.4 7.4 0 0 0 .7 6 7.4 7.4 0 0 0 8 3.6 7.4 7.4 0 0 0 5.6 2.5 7.4 7.4 0 0 0 7.1-5.1 7.4 7.4 0 0 0 4.9-3.6 7.4 7.4 0 0 0-.9-8.7zM17.3 28.4a5.5 5.5 0 0 1-3.5-1.3l.2-.1 5.8-3.4a1 1 0 0 0 .5-.8v-8.2l2.5 1.4v6.8a5.5 5.5 0 0 1-5.5 5.5zM5.4 23.3a5.5 5.5 0 0 1-.7-3.7l.2.1 5.8 3.4a1 1 0 0 0 1 0l7.1-4.1v2.9l-5.9 3.4a5.5 5.5 0 0 1-7.5-2zM3.9 11.1a5.5 5.5 0 0 1 2.9-2.4v6.9a1 1 0 0 0 .5.9l7 4-2.4 1.4-5.9-3.4a5.5 5.5 0 0 1-2-7.4zm20 4.6-7-4 2.4-1.4 5.9 3.4a5.5 5.5 0 0 1-.9 9.9v-6.9a1 1 0 0 0-.5-.9zm2.5-3.7-.2-.1-5.8-3.4a1 1 0 0 0-1 0l-7.1 4.1V9.7l5.9-3.4a5.5 5.5 0 0 1 8.2 5.7zM11.5 17l-2.5-1.4V8.7a5.5 5.5 0 0 1 9-4.2l-.2.1L12 8a1 1 0 0 0-.5.8V17zm1.3-2.9 3.2-1.8 3.2 1.8V18l-3.2 1.8-3.2-1.8z"/></svg>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="install-card" type="button" data-client="chatgpt">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387 2.014-1.158a.076.076 0 0 1 .071 0l4.83 2.787a4.49 4.49 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.142-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>
         </span>
         <div class="text">
           <span class="label">Add to ChatGPT</span>
           <span class="sub">Custom connector URL · Plus / Pro</span>
         </div>
-        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-      </a>
-      <a class="install-card" href="#" id="install-cursor">
-        <span class="ico ico-cursor">
-          <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 3 4 9.4v13.2L16 29l12-6.4V9.4L16 3zm0 2.3 9.6 5.1L16 15.6 6.4 10.4 16 5.3zm-10 7.5 9 4.8v9.8l-9-4.8v-9.8zm20 9.8-9 4.8v-9.8l9-4.8v9.8z"/></svg>
-        </span>
-        <div class="text">
-          <span class="label">Add to Cursor</span>
-          <span class="sub">mcp.json snippet · macOS · Win · Linux</span>
-        </div>
-        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-      </a>
+        <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
     </div>
+    <p class="install-foot reveal d3">
+      Other MCP-compatible clients (Cline, Continue, Zed, VS Code): point them at <code>https://mcp.shopdeals.sh/mcp</code>.
+    </p>
   </div>
 </section>
+
+<!-- Snippet / install modal — populated by the install-card click handler -->
+<div class="modal-backdrop" id="install-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal" role="document">
+    <div class="m-head">
+      <div class="m-title">
+        <span class="ico" id="m-ico"></span>
+        <span id="m-title-text">Install</span>
+      </div>
+      <button class="m-close" type="button" aria-label="Close" id="m-close">&times;</button>
+    </div>
+    <div class="m-body" id="m-body"></div>
+  </div>
+</div>
 
 <section class="faq" id="faq">
   <div class="container">
@@ -1049,7 +1256,7 @@ export function landingHtml(data: LandingData = {}): string {
         <a href="#features">Features</a>
         <a href="#install">Install</a>
         <a href="#faq">FAQ</a>
-        <a href="https://github.com/idanmann10/Snap-AI" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/idanmann10/shopdeals" target="_blank" rel="noopener">GitHub</a>
         <a href="mailto:hello@shopdeals.sh">Contact</a>
         <a href="#">Privacy</a>
         <a href="#">Terms</a>
@@ -1065,24 +1272,30 @@ export function landingHtml(data: LandingData = {}): string {
 <div class="toast" id="toast">Copied to clipboard</div>
 
 <script>
-  const SNIPPETS = {
-    'install-claude': \`{
+  const MCP_URL = 'https://mcp.shopdeals.sh/mcp';
+  const CLAUDE_SNIPPET = \`{
   "mcpServers": {
     "shopdeals": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "https://mcp.shopdeals.sh/mcp"]
     }
   }
-}\`,
-    'install-chatgpt': 'https://mcp.shopdeals.sh/mcp\\n\\nSettings → Connectors → Add custom connector → paste URL',
-    'install-cursor': \`{
+}\`;
+  const CURSOR_SNIPPET = \`{
   "mcpServers": {
     "shopdeals": {
       "url": "https://mcp.shopdeals.sh/mcp"
     }
   }
-}\`,
-  };
+}\`;
+  // Cursor deeplink — opens Cursor and prompts the user to install. The
+  // payload is base64-encoded JSON describing the server entry.
+  function cursorDeeplink() {
+    const payload = { url: MCP_URL };
+    const b64 = typeof btoa === 'function' ? btoa(JSON.stringify(payload)) : '';
+    return 'cursor://anysphere.cursor-deeplink/mcp/install?name=shopdeals&config=' + encodeURIComponent(b64);
+  }
+
   const toast = document.getElementById('toast');
   function flashToast(msg) {
     if (!toast) return;
@@ -1091,19 +1304,151 @@ export function landingHtml(data: LandingData = {}): string {
     clearTimeout(flashToast._t);
     flashToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
   }
-  for (const [id, snippet] of Object.entries(SNIPPETS)) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    el.addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        await navigator.clipboard.writeText(snippet);
-        flashToast(id === 'install-chatgpt' ? 'URL copied' : 'Snippet copied');
-      } catch {
-        alert(snippet);
+
+  async function copy(text, label) {
+    try {
+      await navigator.clipboard.writeText(text);
+      flashToast((label || 'Copied') + ' — pasted to clipboard');
+      return true;
+    } catch {
+      flashToast('Could not copy automatically — select and copy manually');
+      return false;
+    }
+  }
+
+  /* ---------- Install modal ---------- */
+  const modal = document.getElementById('install-modal');
+  const modalIco = document.getElementById('m-ico');
+  const modalTitle = document.getElementById('m-title-text');
+  const modalBody = document.getElementById('m-body');
+  const modalClose = document.getElementById('m-close');
+  function closeModal() {
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  function openModal(opts) {
+    if (!modal || !modalIco || !modalTitle || !modalBody) return;
+    modalIco.innerHTML = opts.icon;
+    modalTitle.textContent = opts.title;
+    modalBody.innerHTML = opts.body;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  modalClose && modalClose.addEventListener('click', closeModal);
+  modal && modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  /* Icon SVGs reused in the modal header */
+  const ICONS = {
+    cursor: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.925.0461c-.123-.0288-.249-.0594-.4116.0337L1.0962 6.0683c-.0846.0488-.1547.119-.2034.2036-.0488.0846-.0744.1804-.0746.278v11.9075c.0002.0976.0258.1935.0746.2781.0487.0846.1188.1547.2034.2036L11.521 23.918l.0006.0003c.045.025.083.0455.1257.0589.0419.0131.0867.0193.1335.0228h.0011a1.06 1.06 0 0 0 .1334-.0228c.0427-.0134.0808-.0339.1257-.0589l.0006-.0003 10.4248-6.0349c.0847-.0488.155-.1188.2038-.2034.0489-.0846.0746-.1804.0749-.2781V6.3504c-.0003-.0977-.026-.1936-.0749-.2782s-.1191-.1546-.2038-.2034L12.3372.0798a.522.522 0 0 0-.4122-.0337zM12.0163.7917l9.7905 5.6669-9.7905 5.6669L2.2257 6.4586l9.7906-5.6669zM1.7757 7.4083l9.7906 5.6669v11.3338L1.7757 18.7421V7.4083zm20.4467 0v11.3338l-9.7905 5.6669V13.0752l9.7905-5.6669z"/></svg>',
+    claude: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.304 3.541h-3.672l6.696 16.918H24Zm-10.608 0L0 20.459h3.744l1.37-3.553h7.005l1.369 3.553h3.744L10.536 3.541Zm-.371 10.223L8.616 7.82l2.291 5.945Z"/></svg>',
+    chatgpt: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494z"/></svg>',
+  };
+
+  /* ---------- Per-client install flows ---------- */
+  function installCursor() {
+    // Try the deeplink first. If the user doesn't have Cursor installed it
+    // silently no-ops, so we ALSO open the snippet modal as the fallback.
+    try {
+      window.location.href = cursorDeeplink();
+    } catch {}
+    setTimeout(() => {
+      openModal({
+        icon: ICONS.cursor,
+        title: 'Add to Cursor',
+        body: \`
+          <p class="m-step">If Cursor opened, click <strong>Install</strong> in the prompt and you're done.</p>
+          <p class="m-step">Otherwise, paste this into <code>~/.cursor/mcp.json</code>:</p>
+          <pre id="cursor-snippet">\${escapeHtml(CURSOR_SNIPPET)}</pre>
+          <div class="m-actions">
+            <button class="m-btn" type="button" id="m-copy-cursor">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy snippet
+            </button>
+            <a class="m-btn secondary" href="\${cursorDeeplink()}">Re-open in Cursor</a>
+          </div>\`,
+      });
+      const btn = document.getElementById('m-copy-cursor');
+      if (btn) btn.addEventListener('click', async () => {
+        if (await copy(CURSOR_SNIPPET, 'Cursor snippet')) {
+          btn.classList.add('secondary', 'copied');
+          btn.firstChild && (btn.lastChild.textContent = ' Copied');
+        }
+      });
+    }, 600);
+  }
+
+  function installClaude() {
+    openModal({
+      icon: ICONS.claude,
+      title: 'Add to Claude Desktop',
+      body: \`
+        <ol class="m-list">
+          <li>Open <strong>Claude Desktop</strong> → <strong>Settings</strong> → <strong>Developer</strong> → <strong>Edit Config</strong>.</li>
+          <li>Paste the snippet below under <code>mcpServers</code>.</li>
+          <li>Restart Claude. The ten shopdeals tools will be available in any chat.</li>
+        </ol>
+        <pre>\${escapeHtml(CLAUDE_SNIPPET)}</pre>
+        <div class="m-actions">
+          <button class="m-btn" type="button" id="m-copy-claude">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy snippet
+          </button>
+          <a class="m-btn secondary" href="https://docs.claude.com/en/docs/agents-and-tools/mcp" target="_blank" rel="noopener">Claude MCP docs</a>
+        </div>\`,
+    });
+    const btn = document.getElementById('m-copy-claude');
+    if (btn) btn.addEventListener('click', async () => {
+      if (await copy(CLAUDE_SNIPPET, 'Claude snippet')) {
+        btn.classList.add('secondary', 'copied');
+        btn.lastChild && (btn.lastChild.textContent = ' Copied');
       }
     });
   }
+
+  function installChatGPT() {
+    openModal({
+      icon: ICONS.chatgpt,
+      title: 'Add to ChatGPT',
+      body: \`
+        <ol class="m-list">
+          <li>In ChatGPT, open <strong>Settings</strong> → <strong>Connectors</strong> → <strong>Add</strong>.</li>
+          <li>Choose <strong>Custom MCP server</strong> and paste this URL:</li>
+        </ol>
+        <pre>\${escapeHtml(MCP_URL)}</pre>
+        <p class="m-step">Custom connectors require ChatGPT <strong>Plus</strong> or <strong>Pro</strong>.</p>
+        <div class="m-actions">
+          <button class="m-btn" type="button" id="m-copy-chatgpt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy URL
+          </button>
+          <a class="m-btn secondary" href="https://chatgpt.com/?model=gpt-4" target="_blank" rel="noopener">Open ChatGPT</a>
+        </div>\`,
+    });
+    const btn = document.getElementById('m-copy-chatgpt');
+    if (btn) btn.addEventListener('click', async () => {
+      if (await copy(MCP_URL, 'MCP URL')) {
+        btn.classList.add('secondary', 'copied');
+        btn.lastChild && (btn.lastChild.textContent = ' Copied');
+      }
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
+  }
+
+  document.querySelectorAll('.install-card[data-client]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const c = el.getAttribute('data-client');
+      if (c === 'cursor') installCursor();
+      else if (c === 'claude') installClaude();
+      else if (c === 'chatgpt') installChatGPT();
+    });
+  });
   // Hero "MCP server URL" row → copy the raw URL.
   const urlRow = document.getElementById('url-row');
   if (urlRow) {

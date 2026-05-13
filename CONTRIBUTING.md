@@ -9,7 +9,7 @@ coupons. Bug reports, source adapters, docs fixes, all welcome.
 Requires Node 22+, npm, and a Postgres 16 instance (Neon's free tier works).
 
 ```bash
-git clone https://github.com/idanmann10/Snap-AI.git shopdeals
+git clone https://github.com/idanmann10/shopdeals.git shopdeals
 cd shopdeals
 cp .env.example .env       # at minimum, set DATABASE_URL
 npm install

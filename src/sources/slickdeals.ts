@@ -42,7 +42,7 @@ import {
 const DEFAULT_FEED_URL =
   'https://slickdeals.net/newsearch.php?mode=frontpage&searcharea=deals&searchin=first&rss=1';
 
-const USER_AGENT = 'shopdeals/0.1 (+https://github.com/idanmann10/Snap-AI)';
+const USER_AGENT = 'shopdeals/0.1 (+https://github.com/idanmann10/shopdeals)';
 
 /**
  * Slugs Slickdeals uses on click-tracking anchors don't always map cleanly

@@ -1,6 +1,6 @@
 <h1 align="center">
   <picture>
-    <img alt="shopdeals" src="https://raw.githubusercontent.com/idanmann10/Snap-AI/main/.github/assets/mark.svg" width="80" height="80" />
+    <img alt="shopdeals" src="https://raw.githubusercontent.com/idanmann10/shopdeals/main/.github/assets/mark.svg" width="80" height="80" />
   </picture>
   <br />
   shopdeals
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/idanmann10/Snap-AI/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/idanmann10/Snap-AI/ci.yml?branch=main&label=CI" alt="CI" /></a>
+  <a href="https://github.com/idanmann10/shopdeals/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/idanmann10/shopdeals/ci.yml?branch=main&label=CI" alt="CI" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-1.x-7c5dfa.svg" alt="MCP 1.x" /></a>
   <a href="https://mcp.shopdeals.sh/mcp"><img src="https://img.shields.io/badge/hosted-mcp.shopdeals.sh-f26b3a.svg" alt="Hosted endpoint" /></a>
@@ -115,7 +115,7 @@ shopdeals runs anywhere Node 22 and a Postgres 16 connection string can. The rep
 ### Locally
 
 ```bash
-git clone https://github.com/idanmann10/Snap-AI.git shopdeals
+git clone https://github.com/idanmann10/shopdeals.git shopdeals
 cd shopdeals
 cp .env.example .env          # at minimum, set DATABASE_URL
 npm install
@@ -197,7 +197,7 @@ Be excellent to each other. We follow the [Contributor Covenant 2.1](./CODE_OF_C
 ---
 
 <p align="center">
-  <a href="https://star-history.com/#idanmann10/Snap-AI&Date">
-    <img src="https://api.star-history.com/svg?repos=idanmann10/Snap-AI&type=Date" alt="Star History Chart" width="540" />
+  <a href="https://star-history.com/#idanmann10/shopdeals&Date">
+    <img src="https://api.star-history.com/svg?repos=idanmann10/shopdeals&type=Date" alt="Star History Chart" width="540" />
   </a>
 </p>
