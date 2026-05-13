@@ -16,7 +16,7 @@
  * agents can re-fetch / list / cancel by id.
  */
 import { z } from 'zod';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { McpContext } from '../context.ts';
 import { priceWatches } from '../../db/schema.ts';
@@ -114,21 +114,4 @@ export async function handler(
   if (input.query) result.query = input.query;
   if (input.productUrl) result.productUrl = input.productUrl;
   return result;
-}
-
-/**
- * Helper exported for `list_watches` / `cancel_watch` follow-ups. Today the
- * tool surface is just `watch_price`; we keep the list helper here so the
- * second tool is a one-liner when we add it.
- */
-export async function listWatchesForClient(
-  ctx: McpContext,
-  limit = 50,
-): Promise<Array<typeof priceWatches.$inferSelect>> {
-  return ctx.db
-    .select()
-    .from(priceWatches)
-    .where(and(eq(priceWatches.clientHash, ctx.clientHash), eq(priceWatches.isActive, true)))
-    .orderBy(desc(priceWatches.createdAt))
-    .limit(limit);
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { and, arrayOverlaps, asc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, arrayOverlaps, asc, eq, gt, or, sql } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
 import { decodeCursor, encodeCursor } from '../cursor.ts';
@@ -99,9 +99,6 @@ export async function handler(
     .where(whereExpr ?? sql`true`)
     .orderBy(asc(merchants.displayName), asc(merchants.id))
     .limit(input.limit + 1);
-
-  // Suppress unused-import warning for `isNull` (kept for symmetry with other tools).
-  void isNull;
 
   const hasMore = rows.length > input.limit;
   const page = hasMore ? rows.slice(0, input.limit) : rows;
