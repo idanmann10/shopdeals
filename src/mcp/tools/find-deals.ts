@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { and, arrayOverlaps, desc, eq, gt, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, arrayOverlaps, desc, eq, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { discountSummary, eligibilitySummary } from '../format.ts';
 import { decodeCursor, encodeCursor } from '../cursor.ts';
 
@@ -53,10 +54,7 @@ export async function handler(
   input: FindDealsInput,
   ctx: McpContext,
 ): Promise<FindDealsResult> {
-  const conditions = [
-    eq(deals.isActive, true),
-    or(isNull(deals.expiresAt), gt(deals.expiresAt, sql`now()`)),
-  ];
+  const conditions = [dealIsActive()];
 
   if (input.merchant) {
     conditions.push(eq(merchants.slug, input.merchant));

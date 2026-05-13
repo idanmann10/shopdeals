@@ -24,15 +24,16 @@
  * is 250/mo = 125 best-deal queries. Starter at $25/mo is 500 queries.
  */
 import { z } from 'zod';
-import { and, eq, gt, inArray, isNull, or } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { SerpApiClient, type SellerOffer } from '../../lib/serpapi.ts';
 import { extractAmazonAsin } from '../../lib/affiliate.ts';
 import { KeepaClient } from '../../sources/keepa.ts';
 import { log } from '../../lib/log.ts';
 import { serpApiRateLimiter } from '../../lib/rate-limit.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'find_best_deal';
 
@@ -104,9 +105,7 @@ export async function handler(
 ): Promise<FindBestDealResult> {
   // Same scope as find_deals — the heavy lifting happens against the public
   // shopping APIs, but we still join against our private coupon catalog.
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
   // Rate limit: each call burns up to 2 SerpApi credits. Without this a
   // looping agent could torch our monthly budget in minutes.
@@ -444,13 +443,7 @@ async function loadCodesForSlugs(
     })
     .from(deals)
     .innerJoin(merchants, eq(deals.merchantId, merchants.id))
-    .where(
-      and(
-        inArray(merchants.slug, slugs),
-        eq(deals.isActive, true),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
-      ),
-    )
+    .where(and(inArray(merchants.slug, slugs), dealIsActive()))
     .limit(200);
 
   const out = new Map<string, CodeMatch[]>();

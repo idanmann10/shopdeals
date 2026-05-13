@@ -21,6 +21,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { McpContext } from '../context.ts';
 import { priceWatches } from '../../db/schema.ts';
 import { log } from '../../lib/log.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'watch_price';
 
@@ -65,9 +66,7 @@ export async function handler(
   input: WatchPriceInput,
   ctx: McpContext,
 ): Promise<WatchPriceResult> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
   // Enforce a per-client cap. Without this, an agent looping through every
   // product on a page could persist thousands of watches and DOS our cron.

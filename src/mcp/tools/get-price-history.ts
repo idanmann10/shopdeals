@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { and, asc, desc, eq, gt, sql } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { McpContext } from '../context.ts';
 import { prices } from '../../db/schema.ts';
 import type { NewPrice } from '../../db/schema.ts';
 import { KEEPA_DEFAULT_STALENESS_MS, KeepaClient } from '../../sources/keepa.ts';
 import { log } from '../../lib/log.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'get_price_history';
 
@@ -50,18 +50,7 @@ export async function handler(
   input: GetPriceHistoryInput,
   ctx: McpContext,
 ): Promise<GetPriceHistoryResult> {
-  if (!ctx.scopes.includes(REQUIRED_SCOPE)) {
-    // NOTE: previously raised `ErrorCode.ConnectionClosed` (-32000), which the
-    // MCP SDK reserves for transport-level disconnects — clients react by
-    // tearing down the session. `MethodNotFound` is also wrong (the method
-    // exists; the caller just lacks scope). `InvalidRequest` (-32600) is the
-    // closest semantic fit in the JSON-RPC error space the SDK exposes for
-    // an authenticated-but-unauthorized request.
-    throw new McpError(
-      ErrorCode.InvalidRequest,
-      `forbidden: ${REQUIRED_SCOPE} scope required`,
-    );
-  }
+  requireScope(ctx, REQUIRED_SCOPE);
 
   // ASIN queries are Keepa-backed. Before reading the cache, check whether
   // the latest observation is older than the freshness window — if so, hit

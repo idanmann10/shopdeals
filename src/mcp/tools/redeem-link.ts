@@ -23,11 +23,12 @@
  * payment info. The affiliate ID is bound to the server, not the agent.
  */
 import { z } from 'zod';
-import { and, eq, inArray, isNull, or, gt } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { urlToMerchantSlug } from './get-code-for-url.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'redeem_link';
 
@@ -61,9 +62,7 @@ export async function handler(
   input: RedeemLinkInput,
   ctx: McpContext,
 ): Promise<RedeemLinkResult> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
   // 1) Always-run: affiliate rewrite. This is the money path — works even
   // when the URL doesn't map to a merchant in our catalog (Skimlinks
@@ -99,9 +98,8 @@ export async function handler(
     .where(
       and(
         inArray(merchants.slug, candidateSlugs),
-        eq(deals.isActive, true),
         eq(deals.kind, 'code'),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
+        dealIsActive(),
       ),
     )
     .limit(1);

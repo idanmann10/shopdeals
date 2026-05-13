@@ -21,13 +21,14 @@
  * Agents should prefer it for that phrasing; this tool is the catalog view.
  */
 import { z } from 'zod';
-import { and, eq, inArray, isNull, or, gt } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { SerpApiClient, type SellerOffer, type ShoppingResult } from '../../lib/serpapi.ts';
 import { log } from '../../lib/log.ts';
 import { serpApiRateLimiter } from '../../lib/rate-limit.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'find_products';
 
@@ -199,9 +200,7 @@ async function loadCodesForSlugs(
   ctx: McpContext,
   slugs: string[],
 ): Promise<Map<string, Array<{ code: string; title: string; dealId: string }>>> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
   const rows = await ctx.db
     .select({
@@ -215,9 +214,8 @@ async function loadCodesForSlugs(
     .where(
       and(
         inArray(merchants.slug, slugs),
-        eq(deals.isActive, true),
         eq(deals.kind, 'code'),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
+        dealIsActive(),
       ),
     )
     .limit(200);

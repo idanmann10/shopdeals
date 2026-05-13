@@ -23,12 +23,13 @@
  * round-trip.
  */
 import { z } from 'zod';
-import { and, eq, inArray, isNull, or, gt, sql } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { extractAmazonAsin } from '../../lib/affiliate.ts';
 import { discountSummary } from '../format.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'get_code_for_url';
 
@@ -104,9 +105,7 @@ export async function handler(
   input: GetCodeForUrlInput,
   ctx: McpContext,
 ): Promise<GetCodeForUrlResult> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
   const extracted = urlToMerchantSlug(input.url);
   if (!extracted) {
@@ -146,9 +145,8 @@ export async function handler(
     .where(
       and(
         inArray(merchants.slug, candidateSlugs),
-        eq(deals.isActive, true),
         eq(deals.kind, 'code'),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
+        dealIsActive(),
       ),
     )
     .orderBy(sql`coalesce(${deals.successRate}, 0.5) desc`)
