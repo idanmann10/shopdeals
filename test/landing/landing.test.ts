@@ -70,10 +70,10 @@ describe('landing page', () => {
     expect(body).toContain('Add to Claude');
     expect(body).toContain('Add to ChatGPT');
     expect(body).toContain('Add to Cursor');
-    // Waitlist form must be rendered with the expected ids the JS hooks into.
-    expect(body).toContain('id="waitlist-form"');
-    expect(body).toContain('id="waitlist-email"');
-    expect(body).toContain('/api/waitlist');
+    // Install CTAs must point at the production MCP endpoint.
+    expect(body).toContain('https://mcp.shopdeals.sh/mcp');
+    // The reusable brand-mark SVG symbol must be defined exactly once.
+    expect(body).toContain('id="sd-mark"');
   });
 
   it('keeps /api as the machine-readable discovery endpoint', async () => {
