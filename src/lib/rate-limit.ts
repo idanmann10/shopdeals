@@ -84,16 +84,6 @@ export class RateLimiter {
   reset(): void {
     this.buckets.clear();
   }
-
-  /** Read-only snapshot of the configured ceiling, for use in user-facing
-   *  messages and landing-page badges. */
-  describe(): { capacity: number; refillPerSecond: number; perMinute: number } {
-    return {
-      capacity: this.config.capacity,
-      refillPerSecond: this.config.refillPerSecond,
-      perMinute: Math.round(this.config.refillPerSecond * 60),
-    };
-  }
 }
 
 /**

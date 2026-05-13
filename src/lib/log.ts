@@ -40,5 +40,3 @@ export const log = pino({
     censor: '[REDACTED]',
   },
 });
-
-export type Logger = typeof log;
