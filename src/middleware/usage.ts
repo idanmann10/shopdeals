@@ -76,7 +76,6 @@ export const usageMiddleware = (
       clientHash: principal.clientHash,
       tool,
       units,
-      stripeReported: false,
     };
     if (principal.orgId !== undefined) row.orgId = principal.orgId;
     if (principal.userId !== undefined) row.userId = principal.userId;

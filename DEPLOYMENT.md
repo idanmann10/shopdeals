@@ -20,7 +20,6 @@ Set the required env vars on this service:
 | ---------------------------- | -------- | -------------------------------------------------- |
 | `DATABASE_URL`               | yes      | Neon / Railway-Postgres connection string          |
 | `CLERK_SECRET_KEY`           | optional | Needed if you want authenticated requests          |
-| `STRIPE_SECRET_KEY`          | optional | Not used while we're free; safe to leave unset     |
 | `KEEPA_API_KEY`              | optional | Enables `get_price_history` Amazon refresh         |
 | `AWIN_API_TOKEN`             | optional | Paid coupon feed; £5 one-time signup               |
 | `AWIN_PUBLISHER_ID`          | optional | Required together with `AWIN_API_TOKEN`            |
@@ -82,8 +81,6 @@ expires/marks-stale deals.
 
 ## What's NOT auto-managed yet
 
-- **Plan tier enforcement.** `STRIPE_PRICE_*` env vars are accepted, but the
-  usage middleware doesn't yet gate requests based on plan. Free for all.
 - **API key issuance.** Keys must be minted via the Clerk dashboard until the
   signup flow ships.
 - **Domain.** `mcp.shopdeals.sh` is referenced in the README but DNS isn't

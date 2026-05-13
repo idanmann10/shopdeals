@@ -45,7 +45,7 @@ A one-page tour of how a request flows through shopdeals.
 
 ## HTTP layer — `src/server.ts`
 
-A small Hono app. Public routes (`/`, `/healthz`, `/api`, the Stripe webhook, the waitlist) are mounted before the auth gate; everything under `/mcp*` is authenticated and metered.
+A small Hono app. Public routes (`/`, `/healthz`, `/api`) are mounted before the auth gate; everything under `/mcp*` is authenticated and metered.
 
 The `/mcp*` route gets a **token-bucket rate limit at 60 calls per minute per client** (`src/lib/rate-limit.ts`). When the bucket empties, the middleware returns a clean JSON-RPC `429` with a `Retry-After` header — no transport error, just back-off guidance the agent can use.
 
@@ -91,7 +91,6 @@ Postgres 16 via Drizzle ORM. Schema in `src/db/schema.ts`. Tables:
 - `price_history` — denormalized snapshots from Keepa.
 - `watches` — user-requested price watches (created by `watch_price`).
 - `usage` — per-request metering rows, written by `usageMiddleware`.
-- `waitlist` — landing-page signups.
 
 The ingest cron (`npm run ingest:prod`, scheduled every 15 min) refreshes the catalog from every adapter whose key is configured. Idempotent — re-running the same window is a no-op.
 

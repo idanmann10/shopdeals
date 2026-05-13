@@ -9,7 +9,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/idanmann10/snap-ai.git"
+    "url": "https://github.com/idanmann10/shopdeals.git"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -42,7 +42,6 @@
     "p-limit": "^6.1.0",
     "pg": "^8.13.0",
     "pino": "^9.5.0",
-    "stripe": "^17.4.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

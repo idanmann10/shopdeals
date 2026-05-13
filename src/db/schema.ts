@@ -192,11 +192,9 @@ export const apiUsage = pgTable(
     tool: varchar('tool', { length: 64 }).notNull(),
     units: integer('units').notNull().default(1),
     occurredAt: timestamp('occurred_at', { withTimezone: true }).defaultNow().notNull(),
-    stripeReported: boolean('stripe_reported').notNull().default(false),
   },
   (t) => ({
     clientOccurredIdx: index('api_usage_client_occurred_idx').on(t.clientHash, t.occurredAt),
-    unreportedIdx: index('api_usage_unreported_idx').on(t.stripeReported, t.occurredAt),
   })
 );
 
@@ -214,20 +212,6 @@ export const ingestRuns = pgTable(
   },
   (t) => ({
     sourceStartedIdx: index('ingest_runs_source_started_idx').on(t.sourceNetwork, t.startedAt),
-  })
-);
-
-export const waitlist = pgTable(
-  'waitlist',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    email: varchar('email', { length: 320 }).notNull(),
-    source: varchar('source', { length: 64 }),
-    referrer: text('referrer'),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => ({
-    emailUnique: uniqueIndex('waitlist_email_unique').on(t.email),
   })
 );
 
@@ -291,8 +275,6 @@ export type ApiUsage = typeof apiUsage.$inferSelect;
 export type NewApiUsage = typeof apiUsage.$inferInsert;
 export type IngestRun = typeof ingestRuns.$inferSelect;
 export type NewIngestRun = typeof ingestRuns.$inferInsert;
-export type WaitlistEntry = typeof waitlist.$inferSelect;
-export type NewWaitlistEntry = typeof waitlist.$inferInsert;
 export type PriceWatch = typeof priceWatches.$inferSelect;
 export type NewPriceWatch = typeof priceWatches.$inferInsert;
 

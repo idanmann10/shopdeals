@@ -10,12 +10,6 @@ const envSchema = z.object({
   CLERK_SECRET_KEY: z.string().min(1).optional(),
   CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
 
-  STRIPE_SECRET_KEY: z.string().min(1).optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
-  STRIPE_PRICE_FREE: z.string().optional(),
-  STRIPE_PRICE_STARTER: z.string().optional(),
-  STRIPE_PRICE_PRO: z.string().optional(),
-
   FMTC_API_KEY: z.string().optional(),
   FMTC_BASE_URL: z.string().url().default('https://s3.fmtc.co/api/v3/'),
 

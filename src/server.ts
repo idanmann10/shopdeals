@@ -1,8 +1,8 @@
 /**
  * `buildApp(opts)` — constructs a fresh Hono application with all routes,
- * middleware, MCP transport, and Stripe webhook wired up. The `src/index.ts`
- * bootstrap calls this with default options; tests construct their own with
- * an overridden `resolveContext`.
+ * middleware, and the MCP transport wired up. The `src/index.ts` bootstrap
+ * calls this with default options; tests construct their own with an
+ * overridden `resolveContext`.
  */
 
 import { Hono } from 'hono';
@@ -14,14 +14,12 @@ import type { McpContext } from './mcp/context.ts';
 import { authMiddleware } from './middleware/auth.ts';
 import { usageMiddleware } from './middleware/usage.ts';
 import { globalMcpRateLimiter } from './lib/rate-limit.ts';
-import { registerStripeWebhook } from './billing/webhook.ts';
 import { db } from './db/client.ts';
 import { env } from './lib/env.ts';
 import { log } from './lib/log.ts';
 import { KeepaClient } from './sources/keepa.ts';
 import { landingHtml } from './landing/page.ts';
 import { loadLandingStats } from './landing/stats.ts';
-import { registerWaitlistRoute } from './landing/waitlist.ts';
 import { createAffiliateRewriter } from './lib/affiliate.ts';
 import { SerpApiClient } from './lib/serpapi.ts';
 import type { AuthPrincipal } from './auth/types.ts';
@@ -64,13 +62,6 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
       docs: 'https://github.com/idanmann10/shopdeals',
     }),
   );
-
-  // Waitlist signup is public — it's the landing-page CTA, so no auth.
-  registerWaitlistRoute(app);
-
-  // Stripe webhook is mounted before the auth gate — it verifies signatures
-  // itself and must accept unauthenticated POSTs from Stripe.
-  registerStripeWebhook(app);
 
   // Auth + usage metering apply to everything below.
   app.use('*', authMiddleware({ allowAnonymous }));
