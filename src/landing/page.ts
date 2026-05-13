@@ -60,24 +60,79 @@ export function landingHtml(data: LandingData = {}): string {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
   a { color: inherit; text-decoration: none; }
   ::selection { background: var(--brand); color: white; }
 
-  .container { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+  .container { max-width: 1240px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+  /* ---------- Global scroll-reveal ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .8s cubic-bezier(.2,.7,.2,1), transform .8s cubic-bezier(.2,.7,.2,1);
+    will-change: opacity, transform;
+  }
+  .reveal.in { opacity: 1; transform: none; }
+  .reveal.d1 { transition-delay: 60ms; }
+  .reveal.d2 { transition-delay: 120ms; }
+  .reveal.d3 { transition-delay: 180ms; }
+  .reveal.d4 { transition-delay: 240ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ---------- Ambient hero glow ---------- */
+  .hero-glow {
+    position: absolute; inset: -120px -120px auto auto;
+    width: 720px; height: 720px;
+    background: radial-gradient(closest-side, rgba(242,107,58,0.32), rgba(242,107,58,0) 70%);
+    filter: blur(6px);
+    pointer-events: none;
+    animation: glow-drift 14s ease-in-out infinite alternate;
+    z-index: 0;
+  }
+  @keyframes glow-drift {
+    0% { transform: translate3d(0,0,0) scale(1); opacity: .9; }
+    100% { transform: translate3d(-40px, 30px, 0) scale(1.08); opacity: 1; }
+  }
+  .hero-blob {
+    position: absolute; left: -160px; bottom: -200px;
+    width: 540px; height: 540px;
+    background: radial-gradient(closest-side, rgba(217,119,87,0.20), rgba(217,119,87,0) 70%);
+    filter: blur(4px);
+    pointer-events: none;
+    animation: glow-drift 18s -6s ease-in-out infinite alternate;
+    z-index: 0;
+  }
 
   /* ---------- Brand mark ---------- */
   .brand-mark { width: 28px; height: 28px; flex-shrink: 0; display: inline-grid; place-items: center; color: var(--brand); }
   .brand-mark.lg { width: 56px; height: 56px; }
-  .brand-mark svg { width: 100%; height: 100%; }
+  .brand-mark svg { width: 100%; height: 100%; transition: transform .4s cubic-bezier(.2,.7,.2,1); }
+  .logo:hover .brand-mark svg { transform: rotate(-8deg) scale(1.05); }
+  /* Subtle continuous bob on hero mark */
+  .brand-mark.bob svg { animation: bob 3.6s ease-in-out infinite; transform-origin: 50% 60%; }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-3px) rotate(-2deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .brand-mark.bob svg { animation: none; } }
 
   /* ---------- Navbar ---------- */
   .nav-wrap {
     position: sticky; top: 0; z-index: 50;
-    background: rgba(14,15,12,0.78);
+    background: rgba(14,15,12,0.62);
     backdrop-filter: saturate(140%) blur(14px);
     -webkit-backdrop-filter: saturate(140%) blur(14px);
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid transparent;
+    transition: background .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .nav-wrap.scrolled {
+    background: rgba(14,15,12,0.88);
+    border-bottom-color: var(--line);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   }
   nav.bar {
     display: flex; align-items: center; justify-content: space-between;
@@ -100,10 +155,25 @@ export function landingHtml(data: LandingData = {}): string {
     background: var(--brand); color: white;
     font-size: 14px; font-weight: 600;
     border-radius: 999px;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(242,107,58,0.30);
     transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
   }
-  .nav-cta:hover { background: var(--brand-2); transform: translateY(-1px); }
+  .nav-cta::after {
+    content: ''; position: absolute; inset: 0;
+    border-radius: 999px;
+    box-shadow: 0 0 0 0 rgba(242,107,58,0.55);
+    animation: cta-pulse 2.8s ease-out infinite;
+    pointer-events: none;
+  }
+  .nav-cta:hover { background: var(--brand-2); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(242,107,58,0.42); }
   .nav-cta svg { width: 14px; height: 14px; }
+  @keyframes cta-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(242,107,58,0.45); }
+    70% { box-shadow: 0 0 0 14px rgba(242,107,58,0); }
+    100% { box-shadow: 0 0 0 0 rgba(242,107,58,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .nav-cta::after { animation: none; } }
   @media (max-width: 720px) {
     .nav-link.docs { display: none; }
   }
@@ -147,8 +217,17 @@ export function landingHtml(data: LandingData = {}): string {
   .btn-primary {
     background: var(--brand); color: white;
     box-shadow: 0 10px 28px rgba(242,107,58,0.30);
+    position: relative; overflow: hidden;
   }
-  .btn-primary:hover { background: var(--brand-2); transform: translateY(-1px); }
+  .btn-primary::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform .9s ease;
+    pointer-events: none;
+  }
+  .btn-primary:hover { background: var(--brand-2); transform: translateY(-1px); box-shadow: 0 14px 32px rgba(242,107,58,0.42); }
+  .btn-primary:hover::before { transform: translateX(120%); }
   .btn-primary .leaf { color: var(--claude); }
   .btn-secondary {
     background: rgba(243,243,241,0.06); color: var(--text);
@@ -235,7 +314,34 @@ export function landingHtml(data: LandingData = {}): string {
     min-height: 460px;
     position: relative;
     overflow: hidden;
+    transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
+    will-change: transform;
   }
+  .fcard::after {
+    content: ''; position: absolute; inset: -1px;
+    border-radius: var(--radius);
+    pointer-events: none;
+    background: radial-gradient(420px circle at var(--mx,50%) var(--my,0%), rgba(255,255,255,0.10), transparent 45%);
+    opacity: 0;
+    transition: opacity .3s ease;
+  }
+  .fcard:hover { transform: translateY(-6px); box-shadow: 0 22px 50px rgba(0,0,0,0.30); }
+  .fcard:hover::after { opacity: 1; }
+  .fcard.expanded:hover { box-shadow: 0 22px 50px rgba(120,60,20,0.28); }
+  /* Shimmer ribbon that drifts diagonally on the pink card */
+  .fcard.expanded::before {
+    content: ''; position: absolute; inset: -40% -20% auto auto;
+    width: 380px; height: 380px;
+    background: radial-gradient(closest-side, rgba(255,255,255,0.45), rgba(255,255,255,0) 70%);
+    transform: rotate(18deg);
+    pointer-events: none;
+    animation: shimmer 9s ease-in-out infinite alternate;
+  }
+  @keyframes shimmer {
+    0% { transform: translate3d(0,0,0) rotate(18deg); }
+    100% { transform: translate3d(-30px, 24px, 0) rotate(18deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .fcard.expanded::before { animation: none; } }
   .fcard.expanded { background: var(--pink-card); color: #1a120c; }
   .fcard.expanded .fc-pill { background: rgba(26,18,12,0.08); color: #1a120c; }
   .fcard.expanded .fc-eyebrow { color: rgba(26,18,12,0.55); }
@@ -322,9 +428,22 @@ export function landingHtml(data: LandingData = {}): string {
     padding: 22px;
     display: flex; align-items: center; gap: 14px;
     cursor: pointer;
-    transition: border-color .14s ease, transform .14s ease, background .14s ease;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s ease, transform .2s ease, background .2s ease, box-shadow .2s ease;
   }
-  .install-card:hover { border-color: var(--line-strong); transform: translateY(-2px); background: var(--surface-2); }
+  .install-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--brand); transform: scaleY(0); transform-origin: top;
+    transition: transform .3s ease;
+  }
+  .install-card:hover { border-color: var(--line-strong); transform: translateY(-3px); background: var(--surface-2); box-shadow: 0 14px 36px rgba(0,0,0,0.25); }
+  .install-card:hover::before { transform: scaleY(1); }
+  .install-card:hover .arrow { transform: translateX(4px); color: var(--brand); }
+  .install-card .arrow { transition: transform .2s ease, color .2s ease; }
+  .install-card.copied { border-color: rgba(43,189,126,0.6); }
+  .install-card .ico { transition: transform .25s ease; }
+  .install-card:hover .ico { transform: scale(1.06) rotate(-3deg); }
   .install-card .ico {
     width: 40px; height: 40px; border-radius: 10px;
     display: inline-grid; place-items: center;
@@ -485,7 +604,7 @@ export function landingHtml(data: LandingData = {}): string {
   <div class="container">
     <nav class="bar">
       <a class="logo" href="/">
-        <span class="brand-mark"><svg><use href="#sd-mark"/></svg></span>
+        <span class="brand-mark bob"><svg><use href="#sd-mark"/></svg></span>
         shopdeals
       </a>
       <div class="nav-right">
@@ -501,12 +620,14 @@ export function landingHtml(data: LandingData = {}): string {
 </div>
 
 <section class="hero">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-blob" aria-hidden="true"></div>
   <div class="container">
     <div class="hero-grid">
       <div>
-        <h1 class="hero-title">Make Claude find the best deal.</h1>
+        <h1 class="hero-title reveal in">Make Claude find the best deal.</h1>
       </div>
-      <div class="hero-right">
+      <div class="hero-right reveal d1 in">
         <p class="hero-sub">An MCP server that gives your AI the ability to shop — compare sellers, watch prices, and apply coupons that actually work.</p>
         <div class="hero-ctas">
           <a class="btn btn-primary" href="#install" id="hero-add-claude">
@@ -541,11 +662,11 @@ export function landingHtml(data: LandingData = {}): string {
 
 <section class="features" id="features">
   <div class="container">
-    <div class="features-header">
+    <div class="features-header reveal">
       <p class="features-eyebrow">Built for AI agents</p>
       <h2 class="features-title">Ten MCP tools that turn any chat into a shopping copilot.</h2>
     </div>
-    <div class="features-grid">
+    <div class="features-grid reveal">
 
       <!-- Expanded card: Best deal -->
       <article class="fcard expanded">
@@ -611,9 +732,9 @@ export function landingHtml(data: LandingData = {}): string {
 
 <section class="install-band" id="install">
   <div class="container">
-    <h2>Add it to your AI workspace.</h2>
-    <p class="lede">Click any card to copy the connection snippet. The endpoint is <code style="background:var(--surface);padding:2px 8px;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--brand);">https://mcp.shopdeals.sh/mcp</code></p>
-    <div class="install-grid">
+    <h2 class="reveal">Add it to your AI workspace.</h2>
+    <p class="lede reveal d1">Click any card to copy the connection snippet. The endpoint is <code style="background:var(--surface);padding:2px 8px;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:var(--brand);">https://mcp.shopdeals.sh/mcp</code></p>
+    <div class="install-grid reveal d2">
       <a class="install-card" href="#" id="install-claude">
         <span class="ico ico-claude">
           <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
@@ -650,14 +771,14 @@ export function landingHtml(data: LandingData = {}): string {
 
 <section class="faq" id="faq">
   <div class="container">
-    <div class="faq-head">
+    <div class="faq-head reveal">
       <div>
         <p class="faq-eyebrow">FAQ</p>
         <h2>Frequently asked.</h2>
       </div>
       <div></div>
     </div>
-    <div class="faq-list">
+    <div class="faq-list reveal d1">
       ${faqItem('What is shopdeals?', `
         <p>shopdeals is an MCP server — a small backend that plugs into AI assistants like Claude, ChatGPT, and Cursor and gives them ten new tools for shopping. With shopdeals connected, your agent can find the best deal across major retailers, watch prices, look up working coupon codes, and check price history.</p>
         <p>It runs at <code>https://mcp.shopdeals.sh/mcp</code> and any MCP-compatible client can connect.</p>
@@ -785,6 +906,62 @@ export function landingHtml(data: LandingData = {}): string {
         await navigator.clipboard.writeText(SNIPPETS['install-claude']);
         flashToast('Snippet copied — paste into Claude Desktop config');
       } catch {}
+    });
+  }
+
+  /* ---------- Scroll reveal ---------- */
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      }
+    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach((el) => {
+      if (!el.classList.contains('in')) io.observe(el);
+    });
+  } else {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'));
+  }
+
+  /* ---------- Nav scroll shadow ---------- */
+  const navWrap = document.querySelector('.nav-wrap');
+  if (navWrap) {
+    let lastY = -1;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y === lastY) return;
+      lastY = y;
+      navWrap.classList.toggle('scrolled', y > 8);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  /* ---------- Feature card spotlight (mouse-follow glow) ---------- */
+  document.querySelectorAll('.fcard').forEach((card) => {
+    card.addEventListener('pointermove', (ev) => {
+      const r = card.getBoundingClientRect();
+      const mx = ((ev.clientX - r.left) / r.width) * 100;
+      const my = ((ev.clientY - r.top) / r.height) * 100;
+      card.style.setProperty('--mx', mx + '%');
+      card.style.setProperty('--my', my + '%');
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.setProperty('--mx', '50%');
+      card.style.setProperty('--my', '0%');
+    });
+  });
+
+  /* ---------- Install card: visual "copied" pulse ---------- */
+  for (const id of ['install-claude', 'install-chatgpt', 'install-cursor']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.addEventListener('click', () => {
+      el.classList.add('copied');
+      setTimeout(() => el.classList.remove('copied'), 900);
     });
   }
 </script>
