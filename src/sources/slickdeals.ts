@@ -78,7 +78,7 @@ export interface SlickdealsAdapterOptions {
   maxItems?: number;
 }
 
-export interface SlickdealsRssItem {
+interface SlickdealsRssItem {
   title?: string;
   link?: string;
   description?: string;

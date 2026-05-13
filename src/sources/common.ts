@@ -174,32 +174,6 @@ export function parseDiscountFromText(text: string | undefined | null): {
   return {};
 }
 
-/**
- * Wrapper around `fetch` that enforces a default timeout via AbortController.
- * Throws on non-2xx responses with a helpful message including the URL and
- * status code.
- */
-export async function fetchWithTimeout(
-  url: string,
-  init: RequestInit = {},
-  timeoutMs = 30_000
-): Promise<Response> {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      throw new Error(
-        `HTTP ${res.status} ${res.statusText} for ${url}${body ? `: ${body.slice(0, 200)}` : ''}`
-      );
-    }
-    return res;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
 /** Sleep helper used by paginated fetchers to respect rate limits. */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

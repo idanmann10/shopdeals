@@ -73,7 +73,7 @@ const CouponSchema = z
   })
   .passthrough();
 
-export type CouponApiCoupon = z.infer<typeof CouponSchema>;
+type CouponApiCoupon = z.infer<typeof CouponSchema>;
 
 const ResponseSchema = z
   .object({
@@ -252,7 +252,7 @@ function isQualityRow(c: CouponApiCoupon, code: string, title: string): boolean 
  * the offer is missing the minimum we need, is marked suspended, or fails
  * the quality gate above.
  */
-export function mapCoupon(c: CouponApiCoupon): RawDealInput | null {
+function mapCoupon(c: CouponApiCoupon): RawDealInput | null {
   const offerId = String(c.offer_id ?? c.id ?? '').trim();
   if (!offerId) return null;
 
