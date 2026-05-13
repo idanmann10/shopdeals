@@ -26,7 +26,7 @@ const prettyTransport = resolvePrettyTransport();
 export const log = pino({
   level: env().LOG_LEVEL,
   ...(prettyTransport ? { transport: prettyTransport } : {}),
-  base: { service: 'snap-ai' },
+  base: { service: 'shopdeals' },
   redact: {
     paths: [
       '*.api_key',

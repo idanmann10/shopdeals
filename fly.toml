@@ -1,4 +1,4 @@
-# fly.toml — Snap-AI MCP server
+# fly.toml — shopdeals MCP server
 #
 # Deploy:    fly deploy
 # Logs:      fly logs

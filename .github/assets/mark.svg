@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="shopdeals">
+  <g fill="none" stroke="#f26b3a">
+    <circle cx="42" cy="42" r="28" stroke-width="8"/>
+    <line x1="62" y1="62" x2="86" y2="86" stroke-width="9" stroke-linecap="round"/>
+  </g>
+  <path d="M42 24 L54 24 L54 58 L42 70 L30 58 L30 36 Z" fill="#f26b3a"/>
+  <circle cx="42" cy="34" r="3" fill="#0e0f0c"/>
+</svg>

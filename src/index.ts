@@ -15,5 +15,5 @@ export const app = buildApp();
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = env().PORT;
   serve({ fetch: app.fetch, port });
-  log.info({ port, env: env().NODE_ENV }, 'snap-ai listening');
+  log.info({ port, env: env().NODE_ENV }, 'shopdeals listening');
 }

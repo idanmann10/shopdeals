@@ -54,7 +54,7 @@ describe('SlickdealsAdapter', () => {
 
     expect(calls).toHaveLength(1);
     const headers = (calls[0]!.init?.headers ?? {}) as Record<string, string>;
-    expect(headers['User-Agent']).toMatch(/Snap-AI/);
+    expect(headers['User-Agent']).toMatch(/shopdeals/);
     expect(calls[0]!.url).toContain('slickdeals.net');
   });
 

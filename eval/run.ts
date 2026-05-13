@@ -79,7 +79,7 @@ async function main(): Promise<number> {
   };
 
   const results: QueryResult[] = [];
-  console.log(`\nsnap-ai eval — ${queries.length} queries × ${iterations} iter\n`);
+  console.log(`\nshopdeals eval — ${queries.length} queries × ${iterations} iter\n`);
 
   for (const q of queries) {
     const timings: number[] = [];

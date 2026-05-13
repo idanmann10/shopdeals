@@ -7,7 +7,7 @@
  * routinely encounter merchant URLs from other sources — user pastes a
  * Best Buy URL from a friend, the agent finds something on a forum and
  * wants to recommend it, etc. Without this tool, the agent has no way to
- * "snap-ai-ify" those URLs, so the commission goes to whoever owns the
+ * "shopdeals-ify" those URLs, so the commission goes to whoever owns the
  * original tracking (often nobody — i.e., revenue is left on the table).
  *
  * What it does:

@@ -1,7 +1,7 @@
 {
-  "name": "snap-ai",
+  "name": "shopdeals",
   "version": "0.1.0",
-  "description": "Open-source MCP server for finding deals, coupons, and cashback. Aggregates merchant-verified affiliate-network promo codes for AI agents.",
+  "description": "The MCP server for shopping. Gives AI agents the ability to find the best deal across trusted sellers, watch prices, and apply coupon codes that actually work.",
   "type": "module",
   "engines": {
     "node": ">=22"

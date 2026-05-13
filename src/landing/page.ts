@@ -83,42 +83,19 @@ export function landingHtml(data: LandingData = {}): string {
     .reveal, .reveal.in { opacity: 1; transform: none; transition: none; }
   }
 
-  /* ---------- Ambient hero glow ---------- */
+  /* ---------- Ambient hero glow (static, no drift) ---------- */
   .hero-glow {
     position: absolute; inset: -120px -120px auto auto;
-    width: 720px; height: 720px;
-    background: radial-gradient(closest-side, rgba(242,107,58,0.32), rgba(242,107,58,0) 70%);
-    filter: blur(6px);
+    width: 640px; height: 640px;
+    background: radial-gradient(closest-side, rgba(242,107,58,0.16), rgba(242,107,58,0) 70%);
     pointer-events: none;
-    animation: glow-drift 14s ease-in-out infinite alternate;
-    z-index: 0;
-  }
-  @keyframes glow-drift {
-    0% { transform: translate3d(0,0,0) scale(1); opacity: .9; }
-    100% { transform: translate3d(-40px, 30px, 0) scale(1.08); opacity: 1; }
-  }
-  .hero-blob {
-    position: absolute; left: -160px; bottom: -200px;
-    width: 540px; height: 540px;
-    background: radial-gradient(closest-side, rgba(217,119,87,0.20), rgba(217,119,87,0) 70%);
-    filter: blur(4px);
-    pointer-events: none;
-    animation: glow-drift 18s -6s ease-in-out infinite alternate;
     z-index: 0;
   }
 
   /* ---------- Brand mark ---------- */
   .brand-mark { width: 28px; height: 28px; flex-shrink: 0; display: inline-grid; place-items: center; color: var(--brand); }
   .brand-mark.lg { width: 56px; height: 56px; }
-  .brand-mark svg { width: 100%; height: 100%; transition: transform .4s cubic-bezier(.2,.7,.2,1); }
-  .logo:hover .brand-mark svg { transform: rotate(-8deg) scale(1.05); }
-  /* Subtle continuous bob on hero mark */
-  .brand-mark.bob svg { animation: bob 3.6s ease-in-out infinite; transform-origin: 50% 60%; }
-  @keyframes bob {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-3px) rotate(-2deg); }
-  }
-  @media (prefers-reduced-motion: reduce) { .brand-mark.bob svg { animation: none; } }
+  .brand-mark svg { width: 100%; height: 100%; }
 
   /* ---------- Navbar ---------- */
   .nav-wrap {
@@ -151,29 +128,14 @@ export function landingHtml(data: LandingData = {}): string {
   .nav-link:hover { color: var(--text); }
   .nav-cta {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 9px 18px;
+    padding: 9px 16px;
     background: var(--brand); color: white;
     font-size: 14px; font-weight: 600;
     border-radius: 999px;
-    position: relative;
-    box-shadow: 0 4px 16px rgba(242,107,58,0.30);
-    transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+    transition: background .14s ease;
   }
-  .nav-cta::after {
-    content: ''; position: absolute; inset: 0;
-    border-radius: 999px;
-    box-shadow: 0 0 0 0 rgba(242,107,58,0.55);
-    animation: cta-pulse 2.8s ease-out infinite;
-    pointer-events: none;
-  }
-  .nav-cta:hover { background: var(--brand-2); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(242,107,58,0.42); }
+  .nav-cta:hover { background: var(--brand-2); }
   .nav-cta svg { width: 14px; height: 14px; }
-  @keyframes cta-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(242,107,58,0.45); }
-    70% { box-shadow: 0 0 0 14px rgba(242,107,58,0); }
-    100% { box-shadow: 0 0 0 0 rgba(242,107,58,0); }
-  }
-  @media (prefers-reduced-motion: reduce) { .nav-cta::after { animation: none; } }
   @media (max-width: 720px) {
     .nav-link.docs { display: none; }
   }
@@ -216,18 +178,8 @@ export function landingHtml(data: LandingData = {}): string {
   }
   .btn-primary {
     background: var(--brand); color: white;
-    box-shadow: 0 10px 28px rgba(242,107,58,0.30);
-    position: relative; overflow: hidden;
   }
-  .btn-primary::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
-    transform: translateX(-120%);
-    transition: transform .9s ease;
-    pointer-events: none;
-  }
-  .btn-primary:hover { background: var(--brand-2); transform: translateY(-1px); box-shadow: 0 14px 32px rgba(242,107,58,0.42); }
-  .btn-primary:hover::before { transform: translateX(120%); }
+  .btn-primary:hover { background: var(--brand-2); }
   .btn-primary .leaf { color: var(--claude); }
   .btn-secondary {
     background: rgba(243,243,241,0.06); color: var(--text);
@@ -246,6 +198,197 @@ export function landingHtml(data: LandingData = {}): string {
     border-right: 5px solid transparent;
     border-top: 6px solid var(--text-dimmer);
   }
+  .hero-foot { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .ghost-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text-dim);
+    transition: color .14s ease;
+  }
+  .ghost-link svg { width: 14px; height: 14px; }
+  .ghost-link:hover { color: var(--text); }
+
+  /* ---------- MCP URL row (replaces the giant CTAs) ---------- */
+  .url-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px 12px 16px;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease;
+  }
+  .url-row:hover { border-color: var(--line-strong); background: var(--surface-2); }
+  .url-row .url-label {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-dimmer); letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding-right: 10px;
+    border-right: 1px solid var(--line);
+  }
+  .url-row .url-value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 14px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .url-row .url-copy {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: color .14s ease, border-color .14s ease, background .14s ease;
+  }
+  .url-row .url-copy:hover { color: var(--text); border-color: var(--line-strong); background: var(--surface); }
+  .url-row .url-copy svg { width: 13px; height: 13px; }
+  .url-row.copied { border-color: rgba(43,189,126,0.5); }
+  .url-row.copied .url-copy { color: #2bbd7e; border-color: rgba(43,189,126,0.5); }
+
+  /* ---------- Search demo (mock agent conversation) ---------- */
+  .demo { padding: 56px 0 56px; }
+  .demo-window {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(243,243,241,0.02) inset;
+    overflow: hidden;
+    max-width: 920px;
+    margin: 0 auto;
+  }
+  .demo-chrome {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+    font-size: 12px; color: var(--text-dim);
+  }
+  .demo-chrome .dots { display: inline-flex; gap: 6px; }
+  .demo-chrome .dots span {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: rgba(243,243,241,0.16);
+  }
+  .demo-chrome .title {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-left: 6px; font-weight: 500; color: var(--text);
+  }
+  .demo-chrome .title .pill {
+    font-size: 10.5px; font-weight: 600;
+    color: var(--text-dim);
+    background: rgba(243,243,241,0.06);
+    border: 1px solid var(--line);
+    padding: 2px 7px; border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+  .demo-body { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .msg { display: flex; gap: 12px; align-items: flex-start; }
+  .msg .avatar {
+    width: 26px; height: 26px; border-radius: 6px;
+    flex-shrink: 0;
+    display: inline-grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .msg.user .avatar { background: rgba(243,243,241,0.10); color: var(--text); }
+  .msg.assistant .avatar { background: rgba(217,119,87,0.18); color: var(--claude); border: 1px solid rgba(217,119,87,0.32); }
+  .msg .who {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .msg .who .tag {
+    font-size: 10.5px; font-weight: 500;
+    color: var(--text-dimmer);
+    background: rgba(243,243,241,0.05);
+    padding: 1px 6px; border-radius: 4px;
+  }
+  .msg .text { font-size: 14.5px; line-height: 1.55; color: var(--text); }
+  .msg .text strong { font-weight: 600; color: var(--text); }
+  .msg .text em { font-style: normal; color: var(--brand-2); font-weight: 500; }
+  .msg .text a { color: var(--brand-2); text-decoration: underline; text-underline-offset: 2px; }
+  .msg.user .text { color: rgba(243,243,241,0.92); }
+
+  /* Tool-call block */
+  .tool-call {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  .tool-call .tc-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: rgba(243,243,241,0.03);
+    border-bottom: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .tool-call .tc-head .dot { width: 6px; height: 6px; border-radius: 50%; background: #2bbd7e; }
+  .tool-call .tc-head .name { color: var(--text); font-weight: 600; }
+  .tool-call .tc-head .ms { margin-left: auto; color: var(--text-dimmer); font-size: 11.5px; }
+  .tool-call .tc-body { padding: 12px 14px; color: var(--text-dim); line-height: 1.5; }
+  .tool-call .tc-body .k { color: rgba(243,243,241,0.55); }
+  .tool-call .tc-body .s { color: #9ecbff; }
+  .tool-call .tc-body .n { color: #ffb86b; }
+
+  /* Tool-result table */
+  .deal-table {
+    width: 100%;
+    border-collapse: separate; border-spacing: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    margin-top: 8px;
+  }
+  .deal-table thead th {
+    text-align: left;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dimmer);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    font-weight: 600;
+  }
+  .deal-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .deal-table tbody tr.best td { color: var(--text); background: rgba(242,107,58,0.06); }
+  .deal-table tbody tr.best td:first-child {
+    color: var(--brand);
+    font-weight: 600;
+    border-left: 2px solid var(--brand);
+    padding-left: 10px;
+  }
+  .deal-table .star { color: var(--brand); margin-right: 4px; }
+  .deal-table .strike { color: var(--text-dimmer); text-decoration: line-through; margin-right: 4px; font-size: 11.5px; }
+  .deal-table .save { color: #2bbd7e; font-weight: 600; }
+
+  /* Typing dots (kept subtle, ~1.4s loop) */
+  .typing { display: inline-flex; gap: 4px; padding: 8px 0; }
+  .typing span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-dimmer);
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.18s; }
+  .typing span:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes typing {
+    0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-2px); }
+  }
+  @media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity: 0.7; } }
 
   /* ---------- Partners carousel ---------- */
   .partners {
@@ -271,11 +414,18 @@ export function landingHtml(data: LandingData = {}): string {
   .marquee-track-outer { overflow: hidden; mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%); }
   .marquee .logo-item {
     display: inline-flex; align-items: center; gap: 10px;
-    color: rgba(243,243,241,0.5);
-    font-size: 16px; font-weight: 500;
+    color: rgba(243,243,241,0.45);
+    font-size: 15px; font-weight: 500;
+    letter-spacing: -0.005em;
     white-space: nowrap;
+    transition: color .2s ease;
   }
-  .marquee .logo-item svg { height: 26px; width: auto; fill: rgba(243,243,241,0.5); }
+  .marquee .logo-item:hover { color: rgba(243,243,241,0.85); }
+  .marquee .logo-glyph {
+    display: inline-grid; place-items: center;
+    width: 22px; height: 22px;
+  }
+  .marquee .logo-glyph svg { width: 100%; height: 100%; fill: currentColor; }
   @keyframes marquee {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
@@ -301,59 +451,55 @@ export function landingHtml(data: LandingData = {}): string {
     text-wrap: balance;
   }
   .features-grid {
-    display: grid; grid-template-columns: 15fr 6fr 3fr;
+    display: grid;
+    grid-template-columns: 15fr 6fr 6fr;
     gap: 14px;
     align-items: stretch;
+    transition: grid-template-columns .5s cubic-bezier(.2,.7,.2,1);
   }
+  /* Re-weight the grid when a non-default card is the active one. */
+  .features-grid[data-active="watch"] { grid-template-columns: 6fr 15fr 6fr; }
+  .features-grid[data-active="codes"] { grid-template-columns: 6fr 6fr 15fr; }
   @media (max-width: 1080px) { .features-grid { grid-template-columns: 1fr; } }
 
   .fcard {
     border-radius: var(--radius);
-    padding: 32px;
+    padding: 24px;
     display: flex; flex-direction: column;
-    min-height: 460px;
+    min-height: 440px;
     position: relative;
     overflow: hidden;
-    transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
-    will-change: transform;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text);
+    transition: background .4s ease, color .4s ease, border-color .2s ease;
   }
-  .fcard::after {
-    content: ''; position: absolute; inset: -1px;
-    border-radius: var(--radius);
-    pointer-events: none;
-    background: radial-gradient(420px circle at var(--mx,50%) var(--my,0%), rgba(255,255,255,0.10), transparent 45%);
-    opacity: 0;
-    transition: opacity .3s ease;
+  .fcard:hover { border-color: var(--line-strong); }
+  .fcard .fc-top { cursor: pointer; user-select: none; outline: none; }
+  .fcard .fc-top:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 6px; }
+  .fcard.expanded { padding: 32px; }
+  .fcard.expanded.theme-pink { background: var(--pink-card); color: #1a120c; border-color: transparent; }
+  .fcard.expanded.theme-pink .fc-pill { background: rgba(26,18,12,0.08); color: #1a120c; }
+  .fcard.expanded.theme-pink .fc-eyebrow { color: rgba(26,18,12,0.55); }
+  .fcard.expanded.theme-pink .fc-body { color: rgba(26,18,12,0.72); }
+  .fcard.expanded.theme-pink .fc-cta { color: #1a120c; }
+  .fcard.expanded.theme-pink .fc-cta:hover { background: rgba(26,18,12,0.08); }
+  .fcard.expanded.theme-pink .fc-icon { background: rgba(26,18,12,0.08); }
+  .fcard.expanded.theme-dark { background: var(--surface-2); }
+  .fcard.expanded.theme-teal { background: var(--teal-card); border-color: transparent; }
+  .fcard.expanded.theme-teal .fc-body { color: rgba(243,243,241,0.75); }
+
+  /* Collapsed: hide body + cta, render compact */
+  .fcard:not(.expanded) .fc-body,
+  .fcard:not(.expanded) .fc-cta {
+    display: none;
   }
-  .fcard:hover { transform: translateY(-6px); box-shadow: 0 22px 50px rgba(0,0,0,0.30); }
-  .fcard:hover::after { opacity: 1; }
-  .fcard.expanded:hover { box-shadow: 0 22px 50px rgba(120,60,20,0.28); }
-  /* Shimmer ribbon that drifts diagonally on the pink card */
-  .fcard.expanded::before {
-    content: ''; position: absolute; inset: -40% -20% auto auto;
-    width: 380px; height: 380px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0.45), rgba(255,255,255,0) 70%);
-    transform: rotate(18deg);
-    pointer-events: none;
-    animation: shimmer 9s ease-in-out infinite alternate;
+  .fcard:not(.expanded) .fc-title { font-size: 22px; }
+  .fcard:not(.expanded) .fc-eyebrow { margin-bottom: 6px; }
+  @media (max-width: 1080px) {
+    .fcard:not(.expanded) .fc-body { display: block; }
+    .fcard:not(.expanded) .fc-cta { display: inline-flex; }
   }
-  @keyframes shimmer {
-    0% { transform: translate3d(0,0,0) rotate(18deg); }
-    100% { transform: translate3d(-30px, 24px, 0) rotate(18deg); }
-  }
-  @media (prefers-reduced-motion: reduce) { .fcard.expanded::before { animation: none; } }
-  .fcard.expanded { background: var(--pink-card); color: #1a120c; }
-  .fcard.expanded .fc-pill { background: rgba(26,18,12,0.08); color: #1a120c; }
-  .fcard.expanded .fc-eyebrow { color: rgba(26,18,12,0.55); }
-  .fcard.expanded .fc-body { color: rgba(26,18,12,0.7); }
-  .fcard.expanded .fc-cta { color: #1a120c; }
-  .fcard.expanded .fc-cta:hover { background: rgba(26,18,12,0.08); }
-  .fcard.dark { background: var(--surface); color: var(--text); }
-  .fcard.dark .fc-body { color: var(--text-dim); }
-  .fcard.dark .fc-pill { background: rgba(243,243,241,0.08); color: var(--text); }
-  .fcard.teal { background: var(--teal-card); color: var(--text); }
-  .fcard.teal .fc-body { color: rgba(243,243,241,0.75); }
-  .fcard.teal .fc-pill { background: rgba(243,243,241,0.10); color: var(--text); }
 
   .fc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 28px; }
   .fc-icon {
@@ -400,11 +546,6 @@ export function landingHtml(data: LandingData = {}): string {
   .fc-cta:hover { background: rgba(243,243,241,0.08); }
   .fc-cta svg { width: 14px; height: 14px; }
 
-  /* Compact cards (middle + right) hide the body paragraphs by default */
-  .fcard.compact .fc-body.secondary { display: none; }
-  @media (max-width: 1080px) {
-    .fcard.compact .fc-body.secondary { display: block; }
-  }
 
   /* ---------- Install ---------- */
   .install-band {
@@ -432,18 +573,10 @@ export function landingHtml(data: LandingData = {}): string {
     overflow: hidden;
     transition: border-color .2s ease, transform .2s ease, background .2s ease, box-shadow .2s ease;
   }
-  .install-card::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-    background: var(--brand); transform: scaleY(0); transform-origin: top;
-    transition: transform .3s ease;
-  }
-  .install-card:hover { border-color: var(--line-strong); transform: translateY(-3px); background: var(--surface-2); box-shadow: 0 14px 36px rgba(0,0,0,0.25); }
-  .install-card:hover::before { transform: scaleY(1); }
-  .install-card:hover .arrow { transform: translateX(4px); color: var(--brand); }
-  .install-card .arrow { transition: transform .2s ease, color .2s ease; }
+  .install-card:hover { border-color: var(--line-strong); background: var(--surface-2); }
+  .install-card .arrow { transition: transform .15s ease; }
+  .install-card:hover .arrow { transform: translateX(2px); }
   .install-card.copied { border-color: rgba(43,189,126,0.6); }
-  .install-card .ico { transition: transform .25s ease; }
-  .install-card:hover .ico { transform: scale(1.06) rotate(-3deg); }
   .install-card .ico {
     width: 40px; height: 40px; border-radius: 10px;
     display: inline-grid; place-items: center;
@@ -548,12 +681,6 @@ export function landingHtml(data: LandingData = {}): string {
   }
   footer .col-brand .live-pill .dot {
     width: 6px; height: 6px; border-radius: 50%; background: #2bbd7e;
-    box-shadow: 0 0 0 0 rgba(43,189,126,0.6);
-    animation: dot-pulse 2.4s ease-out infinite;
-  }
-  @keyframes dot-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(43,189,126,0.55); }
-    100% { box-shadow: 0 0 0 8px rgba(43,189,126,0); }
   }
   footer .links { display: flex; gap: 22px; flex-wrap: wrap; }
   footer .links a { color: var(--text-dim); }
@@ -604,16 +731,14 @@ export function landingHtml(data: LandingData = {}): string {
   <div class="container">
     <nav class="bar">
       <a class="logo" href="/">
-        <span class="brand-mark bob"><svg><use href="#sd-mark"/></svg></span>
+        <span class="brand-mark"><svg><use href="#sd-mark"/></svg></span>
         shopdeals
       </a>
       <div class="nav-right">
+        <a class="nav-link" href="#features">Tools</a>
         <a class="nav-link docs" href="#faq">Docs</a>
-        <a class="nav-link" href="https://github.com/idanmann10/snap-ai" target="_blank" rel="noopener">GitHub</a>
-        <a class="nav-cta" href="#install" id="nav-add-claude">
-          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#d97757" d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
-          Add to Claude
-        </a>
+        <a class="nav-link" href="https://github.com/idanmann10/Snap-AI" target="_blank" rel="noopener">GitHub</a>
+        <a class="nav-cta" href="#install">Get the URL</a>
       </div>
     </nav>
   </div>
@@ -621,7 +746,6 @@ export function landingHtml(data: LandingData = {}): string {
 
 <section class="hero">
   <div class="hero-glow" aria-hidden="true"></div>
-  <div class="hero-blob" aria-hidden="true"></div>
   <div class="container">
     <div class="hero-grid">
       <div>
@@ -629,20 +753,99 @@ export function landingHtml(data: LandingData = {}): string {
       </div>
       <div class="hero-right reveal d1 in">
         <p class="hero-sub">An MCP server that gives your AI the ability to shop — compare sellers, watch prices, and apply coupons that actually work.</p>
-        <div class="hero-ctas">
-          <a class="btn btn-primary" href="#install" id="hero-add-claude">
-            <svg class="leaf" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M8.5 22.5h3.6l3.9-9.4 3.9 9.4h3.6L18 4h-4L8.5 22.5zm5-7.3 2.5-6.1 2.5 6.1h-5z"/></svg>
-            Add to Claude
-          </a>
-          <a class="btn btn-secondary" href="https://github.com/idanmann10/snap-ai" target="_blank" rel="noopener">
+        <div class="url-row" id="url-row" title="Click to copy">
+          <span class="url-label">MCP server</span>
+          <code class="url-value">https://mcp.shopdeals.sh/mcp</code>
+          <button class="url-copy" type="button" aria-label="Copy MCP server URL">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span class="url-copy-label">Copy</span>
+          </button>
+        </div>
+        <div class="hero-foot">
+          <span class="hero-meta">
+            <span class="tri"></span>
+            Compatible with any MCP client
+          </span>
+          <a class="ghost-link" href="https://github.com/idanmann10/Snap-AI" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.17-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.9 10.9 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.73.8 1.17 1.82 1.17 3.07 0 4.4-2.69 5.36-5.25 5.65.41.35.78 1.05.78 2.12v3.14c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
             View on GitHub
           </a>
         </div>
-        <span class="hero-meta">
-          <span class="tri"></span>
-          Compatible with any MCP client
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="search-demo">
+  <div class="container">
+    <div class="demo-window reveal">
+      <div class="demo-chrome">
+        <span class="dots"><span></span><span></span><span></span></span>
+        <span class="title">
+          shopdeals
+          <span class="pill">MCP · find_best_deal</span>
         </span>
+      </div>
+      <div class="demo-body">
+        <div class="msg user">
+          <span class="avatar">You</span>
+          <div>
+            <div class="who">You <span class="tag">just now</span></div>
+            <div class="text">What's the best deal on the Sony WH-1000XM5 headphones right now?</div>
+          </div>
+        </div>
+
+        <div class="msg assistant">
+          <span class="avatar">C</span>
+          <div style="flex:1; min-width: 0;">
+            <div class="who">Claude <span class="tag">claude-opus-4.7</span></div>
+            <div class="text" style="margin-bottom: 10px; color: var(--text-dim);">Let me check across sellers — comparing total price including shipping and applicable coupons.</div>
+            <div class="tool-call">
+              <div class="tc-head">
+                <span class="dot"></span>
+                <span class="name">find_best_deal</span>
+                <span>called shopdeals</span>
+                <span class="ms">412 ms</span>
+              </div>
+              <div class="tc-body">
+                <div>{</div>
+                <div style="padding-left: 16px;"><span class="k">"query"</span>: <span class="s">"Sony WH-1000XM5"</span>,</div>
+                <div style="padding-left: 16px;"><span class="k">"maxResults"</span>: <span class="n">3</span></div>
+                <div>}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg assistant">
+          <span class="avatar">C</span>
+          <div style="flex:1; min-width: 0;">
+            <div class="who">Tool result <span class="tag">3 sellers compared</span></div>
+            <table class="deal-table" role="table">
+              <thead>
+                <tr><th>Seller</th><th>Price</th><th>Total</th><th>Code</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Best Buy</td><td>$349.99</td><td>$349.99</td><td>—</td></tr>
+                <tr class="best">
+                  <td><span class="star">★</span>Amazon</td>
+                  <td><span class="strike">$399</span>$298.00</td>
+                  <td>$298.00</td>
+                  <td><span class="save">SAVE25</span></td>
+                </tr>
+                <tr><td>Target</td><td>$329.99</td><td>$349.98</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="msg assistant">
+          <span class="avatar">C</span>
+          <div>
+            <div class="who">Claude</div>
+            <div class="text">Best deal is <strong>Amazon at $298.00</strong> — $51 below Best Buy, free Prime shipping, and the <em>SAVE25</em> code stacks at checkout. Confirmed working 4 minutes ago. <a href="#install">Get the buy link →</a></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -666,10 +869,9 @@ export function landingHtml(data: LandingData = {}): string {
       <p class="features-eyebrow">Built for AI agents</p>
       <h2 class="features-title">Ten MCP tools that turn any chat into a shopping copilot.</h2>
     </div>
-    <div class="features-grid reveal">
+    <div class="features-grid reveal" data-active="best">
 
-      <!-- Expanded card: Best deal -->
-      <article class="fcard expanded">
+      <article class="fcard expanded theme-pink" data-key="best">
         <div class="fc-top">
           <span class="fc-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -684,14 +886,13 @@ export function landingHtml(data: LandingData = {}): string {
         <p class="fc-body">Across Amazon, Best Buy, Walmart, Target and more. The agent compares total cost (price + shipping + tax) and returns the cheapest with a direct affiliate link.</p>
         <p class="fc-body">Live across ${merchantCount} merchants and ${dealCount} deals — updated continuously so the answer is fresh by the time the model answers.</p>
         <div class="fc-spacer"></div>
-        <a class="fc-cta" href="#install">
+        <a class="fc-cta" href="#search-demo">
           See it in action
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
         </a>
       </article>
 
-      <!-- Middle card: Watch prices -->
-      <article class="fcard dark compact">
+      <article class="fcard theme-dark" data-key="watch">
         <div class="fc-top">
           <span class="fc-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -704,12 +905,15 @@ export function landingHtml(data: LandingData = {}): string {
         <p class="fc-eyebrow">watch_price</p>
         <h3 class="fc-title">Never miss a drop.</h3>
         <p class="fc-body">Set a target price on anything. We'll email you when it hits, with the buy link ready to go.</p>
-        <p class="fc-body secondary">Price history backs every watch — the agent can show you how the deal compares to the last 90 days.</p>
+        <p class="fc-body">Price history backs every watch — the agent can show you how the deal compares to the last 90 days.</p>
         <div class="fc-spacer"></div>
+        <a class="fc-cta" href="#install">
+          Add to your client
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
       </article>
 
-      <!-- Right card: Coupons -->
-      <article class="fcard teal compact">
+      <article class="fcard theme-teal" data-key="codes">
         <div class="fc-top">
           <span class="fc-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -722,8 +926,12 @@ export function landingHtml(data: LandingData = {}): string {
         <p class="fc-eyebrow">get_code_for_url</p>
         <h3 class="fc-title">Every code that actually works.</h3>
         <p class="fc-body">Built on 362K coupons across 82 affiliate networks. The agent picks the best stacking code for any cart.</p>
-        <p class="fc-body secondary">Telemetry from every agent run kills dead codes automatically — so the next request gets a working one.</p>
+        <p class="fc-body">Telemetry from every agent run kills dead codes automatically — so the next request gets a working one.</p>
         <div class="fc-spacer"></div>
+        <a class="fc-cta" href="#install">
+          Add to your client
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
       </article>
 
     </div>
@@ -841,7 +1049,7 @@ export function landingHtml(data: LandingData = {}): string {
         <a href="#features">Features</a>
         <a href="#install">Install</a>
         <a href="#faq">FAQ</a>
-        <a href="https://github.com/idanmann10/snap-ai" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/idanmann10/Snap-AI" target="_blank" rel="noopener">GitHub</a>
         <a href="mailto:hello@shopdeals.sh">Contact</a>
         <a href="#">Privacy</a>
         <a href="#">Terms</a>
@@ -896,16 +1104,46 @@ export function landingHtml(data: LandingData = {}): string {
       }
     });
   }
-  // "Add to Claude" buttons in nav + hero also copy the Claude snippet.
-  for (const btnId of ['nav-add-claude', 'hero-add-claude']) {
-    const btn = document.getElementById(btnId);
-    if (!btn) continue;
-    btn.addEventListener('click', async (e) => {
-      // Let it scroll, AND copy the snippet so the user sees the toast.
+  // Hero "MCP server URL" row → copy the raw URL.
+  const urlRow = document.getElementById('url-row');
+  if (urlRow) {
+    urlRow.addEventListener('click', async () => {
       try {
-        await navigator.clipboard.writeText(SNIPPETS['install-claude']);
-        flashToast('Snippet copied — paste into Claude Desktop config');
-      } catch {}
+        await navigator.clipboard.writeText('https://mcp.shopdeals.sh/mcp');
+        urlRow.classList.add('copied');
+        const lbl = urlRow.querySelector('.url-copy-label');
+        if (lbl) {
+          const prev = lbl.textContent;
+          lbl.textContent = 'Copied';
+          setTimeout(() => { lbl.textContent = prev; urlRow.classList.remove('copied'); }, 1400);
+        } else {
+          setTimeout(() => urlRow.classList.remove('copied'), 1400);
+        }
+        flashToast('MCP URL copied');
+      } catch {
+        flashToast('Could not copy — select and copy manually');
+      }
+    });
+  }
+
+  /* ---------- Feature cards: click to expand ---------- */
+  const featureGrid = document.querySelector('.features-grid');
+  if (featureGrid) {
+    const cards = Array.from(featureGrid.querySelectorAll('.fcard'));
+    cards.forEach((card) => {
+      const header = card.querySelector('.fc-top');
+      const onActivate = () => {
+        if (card.classList.contains('expanded')) return;
+        cards.forEach((c) => c.classList.remove('expanded'));
+        card.classList.add('expanded');
+        featureGrid.setAttribute('data-active', card.dataset.key || '');
+      };
+      header && header.addEventListener('click', onActivate);
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivate(); }
+      });
+      header && header.setAttribute('tabindex', '0');
+      header && header.setAttribute('role', 'button');
     });
   }
 
@@ -940,21 +1178,6 @@ export function landingHtml(data: LandingData = {}): string {
     onScroll();
   }
 
-  /* ---------- Feature card spotlight (mouse-follow glow) ---------- */
-  document.querySelectorAll('.fcard').forEach((card) => {
-    card.addEventListener('pointermove', (ev) => {
-      const r = card.getBoundingClientRect();
-      const mx = ((ev.clientX - r.left) / r.width) * 100;
-      const my = ((ev.clientY - r.top) / r.height) * 100;
-      card.style.setProperty('--mx', mx + '%');
-      card.style.setProperty('--my', my + '%');
-    });
-    card.addEventListener('pointerleave', () => {
-      card.style.setProperty('--mx', '50%');
-      card.style.setProperty('--my', '0%');
-    });
-  });
-
   /* ---------- Install card: visual "copied" pulse ---------- */
   for (const id of ['install-claude', 'install-chatgpt', 'install-cursor']) {
     const el = document.getElementById(id);
@@ -969,22 +1192,59 @@ export function landingHtml(data: LandingData = {}): string {
 </html>`;
 }
 
-/** Partner logos for the marquee. Each item is a wordmark or a small SVG mark.
- *  We dimm them via CSS (rgba(243,243,241,0.5)) so they read as ambient context,
- *  not endorsements. */
+/** Partner logos for the marquee — real monochrome brand marks rendered as
+ *  inline SVG. Each mark is brand-accurate at the silhouette level; CSS dims
+ *  the whole row so they read as ambient context, not endorsements. */
 function partnersRow(): string {
-  const items = [
-    { name: 'OpenAI', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">OpenAI</text></svg>' },
-    { name: 'Claude', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Claude</text></svg>' },
-    { name: 'Cursor', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Cursor</text></svg>' },
-    { name: 'Manus', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Manus</text></svg>' },
-    { name: 'VS Code', svg: '<svg viewBox="0 0 110 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">VS Code</text></svg>' },
-    { name: 'GitHub Copilot', svg: '<svg viewBox="0 0 170 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">GitHub Copilot</text></svg>' },
-    { name: 'Gemini', svg: '<svg viewBox="0 0 100 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Gemini</text></svg>' },
-    { name: 'Perplexity', svg: '<svg viewBox="0 0 130 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Perplexity</text></svg>' },
-    { name: 'Cline', svg: '<svg viewBox="0 0 80 26" xmlns="http://www.w3.org/2000/svg"><text x="0" y="20" font-family="system-ui,sans-serif" font-size="20" font-weight="600" fill="currentColor">Cline</text></svg>' },
+  // Brand mark + wordmark composite. Each item renders the mark (24px square)
+  // followed by the brand name in the page's system font, so the row reads
+  // as "icon + name" rather than just abstract glyphs.
+  const items: Array<{ name: string; svg: string }> = [
+    {
+      name: 'Claude',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.304 3.541h-3.672l6.696 16.918H24Zm-10.608 0L0 20.459h3.744l1.37-3.553h7.005l1.369 3.553h3.744L10.536 3.541Zm-.371 10.223L8.616 7.82l2.291 5.945Z"/></svg>`,
+    },
+    {
+      name: 'OpenAI',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387 2.014-1.158a.076.076 0 0 1 .071 0l4.83 2.787a4.49 4.49 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.142-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>`,
+    },
+    {
+      name: 'Cursor',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.925.0461c-.123-.0288-.249-.0594-.4116.0337L1.0962 6.0683c-.0846.0488-.1547.119-.2034.2036-.0488.0846-.0744.1804-.0746.278v11.9075c.0002.0976.0258.1935.0746.2781.0487.0846.1188.1547.2034.2036L11.521 23.918l.0006.0003c.045.025.083.0455.1257.0589.0419.0131.0867.0193.1335.0228h.0011a1.06 1.06 0 0 0 .1334-.0228c.0427-.0134.0808-.0339.1257-.0589l.0006-.0003 10.4248-6.0349c.0847-.0488.155-.1188.2038-.2034.0489-.0846.0746-.1804.0749-.2781V6.3504c-.0003-.0977-.026-.1936-.0749-.2782s-.1191-.1546-.2038-.2034L12.3372.0798a.522.522 0 0 0-.4122-.0337zM12.0163.7917l9.7905 5.6669-9.7905 5.6669L2.2257 6.4586l9.7906-5.6669zM1.7757 7.4083l9.7906 5.6669v11.3338L1.7757 18.7421V7.4083zm20.4467 0v11.3338l-9.7905 5.6669V13.0752l9.7905-5.6669z"/></svg>`,
+    },
+    {
+      name: 'Gemini',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 24A14.304 14.304 0 0 0 0 12 14.304 14.304 0 0 0 12 0a14.305 14.305 0 0 0 12 12 14.305 14.305 0 0 0-12 12"/></svg>`,
+    },
+    {
+      name: 'Perplexity',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22.3977 7.0896h-2.3106V.7522l-7.4288 6.3374h7.4288V16.456l-5.1187-5.121v6.1818h-2.5566v-6.1818l-5.1187 5.121V7.0896h7.4288L9.343.7522v6.3374H7.0324c-.3211 0-.5811.2603-.5811.5814v8.7305c0 .3211.26.5814.5811.5814h2.3106v6.3374L14.395 16.456v6.1818h2.5566v-6.1818l5.1187 5.121V7.0896h-.6726z"/></svg>`,
+    },
+    {
+      name: 'VS Code',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.15 2.587 18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.9 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z"/></svg>`,
+    },
+    {
+      name: 'GitHub Copilot',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.922 16.992c-.861 1.495-5.859 5.023-11.922 5.023-6.063 0-11.061-3.528-11.922-5.023A.641.641 0 0 1 0 16.736v-2.869a.881.881 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.195 10.195 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.846.846 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.251zm-11.999-5.99h.149c.21 0 .357.165.357.371v.001c0 .206-.146.371-.357.371h-.149c-.21 0-.357-.165-.357-.371s.147-.372.357-.372zm-7.157 5.51c0-.95.34-1.717.94-2.252.6-.535 1.45-.835 2.45-.835s1.85.3 2.45.835c.6.535.94 1.301.94 2.252v.003c0 .95-.34 1.716-.94 2.251-.6.535-1.45.835-2.45.835s-1.85-.3-2.45-.835c-.6-.535-.94-1.301-.94-2.251v-.003zm10.234 0c0-.95.34-1.717.94-2.252.6-.535 1.45-.835 2.45-.835s1.85.3 2.45.835c.6.535.94 1.301.94 2.252v.003c0 .95-.34 1.716-.94 2.251-.6.535-1.45.835-2.45.835s-1.85-.3-2.45-.835c-.6-.535-.94-1.301-.94-2.251v-.003z"/></svg>`,
+    },
+    {
+      name: 'Cline',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.515 4.514L0 4.51c0 9.385 7.628 17.011 17.011 17.011 0-9.382-7.624-17.007-17.007-17.007zM21.49 4.51v8.523c0 4.674-3.794 8.467-8.479 8.488a17.04 17.04 0 0 1-.013-.49c0-4.683 3.794-8.484 8.478-8.498V4.51c0-1.105-.895-2-2-2h-.001c1.105 0 2 .895 2 2zm-9.49 7.495c0-1.105.895-2 2-2s2 .895 2 2-.895 2-2 2-2-.895-2-2z"/></svg>`,
+    },
+    {
+      name: 'Zed',
+      svg: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0Zm-1.27 5.78h6.99a.7.7 0 0 1 .7.7v1.4a.7.7 0 0 1-.7.7H13.4l4.78 7.94a.7.7 0 0 1-.6 1.06H6.65a.7.7 0 0 1-.7-.7v-1.4a.7.7 0 0 1 .7-.7h4.32L6.19 6.84a.7.7 0 0 1 .6-1.06h3.94Z"/></svg>`,
+    },
   ];
-  return items.map(i => `<span class="logo-item" style="color: rgba(243,243,241,0.5);">${i.svg}</span>`).join('');
+  return items
+    .map(
+      (i) => `<span class="logo-item">
+        <span class="logo-glyph" aria-hidden="true">${i.svg}</span>
+        <span class="logo-name">${i.name}</span>
+      </span>`,
+    )
+    .join('');
 }
 
 function faqItem(question: string, answerHtml: string, open = false): string {

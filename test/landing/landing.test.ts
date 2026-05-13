@@ -81,7 +81,7 @@ describe('landing page', () => {
     const res = await app.request('/api');
     expect(res.status).toBe(200);
     const body = (await res.json()) as { name?: string; mcp?: string };
-    expect(body.name).toBe('snap-ai');
+    expect(body.name).toBe('shopdeals');
     expect(body.mcp).toBe('/mcp');
   });
 });

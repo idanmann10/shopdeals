@@ -1,25 +1,36 @@
-# Snap-AI
+<h1 align="center">
+  <picture>
+    <img alt="shopdeals" src="https://raw.githubusercontent.com/idanmann10/Snap-AI/main/.github/assets/mark.svg" width="80" height="80" />
+  </picture>
+  <br />
+  shopdeals
+</h1>
 
-> An open-source MCP server that gives AI agents real, working coupon codes — pulled from merchant-verified affiliate-network feeds, not scraped.
+<p align="center">
+  <em>The MCP server for shopping.</em>
+</p>
 
-[![CI](https://github.com/idanmann10/snap-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/idanmann10/snap-ai/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+<p align="center">
+  <a href="https://github.com/idanmann10/Snap-AI/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/idanmann10/Snap-AI/ci.yml?branch=main&label=CI" alt="CI" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
+  <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-1.x-7c5dfa.svg" alt="MCP 1.x" /></a>
+  <a href="https://mcp.shopdeals.sh/mcp"><img src="https://img.shields.io/badge/hosted-mcp.shopdeals.sh-f26b3a.svg" alt="Hosted endpoint" /></a>
+  <a href="https://www.npmjs.com/package/shopdeals"><img src="https://img.shields.io/badge/node-%E2%89%A522-339933.svg" alt="Node 22+" /></a>
+</p>
 
-## Why this exists (TL;DR)
+<p align="center">
+  <strong>shopdeals</strong> gives AI agents shopping superpowers. One MCP endpoint lets Claude,
+  ChatGPT, or Cursor compare live seller prices across the web, watch a product
+  until it hits a target price, and apply coupon codes that actually work at
+  checkout — all with affiliate attribution preserved so the right publisher
+  gets paid.
+</p>
 
-In January 2026, Honey was kicked off Impact and Rakuten after a string of attribution-stripping incidents, and independent audits put their public code success rate around 33%. The largest consumer coupon tool on the planet effectively collapsed overnight.
+---
 
-At the same time:
+## Quick start
 
-- Zero deal-specific MCP servers exist for AI agents — Claude, ChatGPT, and Cursor have no clean way to surface working promo codes.
-- Affiliate networks (FMTC, Awin, Impact, CJ, Rakuten) already publish merchant-verified coupon APIs. Nobody had aggregated them for agents.
-- Telemetry from real checkouts is the only honest way to score whether a code actually works.
-
-Snap-AI is the layer that fills that gap: a single MCP endpoint that returns codes the merchants themselves uploaded, with an `attributionSource` on every deal so the upstream publisher gets credit.
-
-## One-click install
-
-The hosted server lives at `https://mcp.snap-ai.dev/mcp`. You can self-host instead — see [Quickstart](#quickstart).
+The hosted server lives at **`https://mcp.shopdeals.sh/mcp`**. Drop it into your client:
 
 ### Claude Desktop
 
@@ -28,22 +39,20 @@ Add to `~/.claude/mcp.json` (macOS / Linux) or `%APPDATA%\Claude\mcp.json` (Wind
 ```json
 {
   "mcpServers": {
-    "snap-ai": {
+    "shopdeals": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.snap-ai.dev/mcp"]
+      "args": ["-y", "mcp-remote", "https://mcp.shopdeals.sh/mcp"]
     }
   }
 }
 ```
 
-The same JSON works in `claude_desktop_config.json`.
+### ChatGPT (Plus / Pro custom connector)
 
-### Claude.ai (web)
-
-Open Settings → Connectors → Add custom MCP server → paste:
+Settings → **Connectors** → **Add custom MCP server** → paste:
 
 ```
-https://mcp.snap-ai.dev/mcp
+https://mcp.shopdeals.sh/mcp
 ```
 
 ### Cursor
@@ -53,115 +62,142 @@ Add to `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "snap-ai": {
-      "url": "https://mcp.snap-ai.dev/mcp"
+    "shopdeals": {
+      "url": "https://mcp.shopdeals.sh/mcp"
     }
   }
 }
 ```
 
-### Continue
+> For self-hosting, see [Self-hosting](#self-hosting) below.
 
-Add to `~/.continue/config.json` under `experimental.modelContextProtocolServers`:
+## What your agent gets
 
-```json
-{
-  "transport": { "type": "streamable-http", "url": "https://mcp.snap-ai.dev/mcp" }
-}
+Ten tools, all spec-compliant MCP. Inputs are typed (Zod-validated), outputs are structured JSON.
+
+| Tool | What it does |
+| --- | --- |
+| `find_best_deal` | Compare live seller prices for a query, attach matching coupons, flag Amazon price lows via Keepa, return the ranked best buy plus alternatives. |
+| `find_deals` | Search the merchant-verified coupon catalog by merchant, query, country, or category. |
+| `find_products` | Live Google Shopping search via SerpApi. Returns each seller's direct buy link, price, and any coupon we hold. |
+| `get_code_for_url` | Given any merchant URL (Amazon, Best Buy, etc.), return the best active coupon codes for that merchant. |
+| `get_deal` | Fetch a single deal by id with full discount spec, stack rules, and attribution. |
+| `get_price_history` | 30-day / 90-day / all-time price history for any Amazon ASIN or product URL (Keepa-backed). |
+| `list_merchants` | Browse merchants with at least one active deal. Filter by category, country, or name substring. |
+| `redeem_link` | Wrap any merchant URL with affiliate tracking so a buy converts to commission. Also hints whether codes exist. |
+| `report_code_result` | Telemetry: agent reports whether a code worked at checkout. Updates rolling 30-day success rate. |
+| `watch_price` | Persist a price watch — notify the user when the product hits a target price. Returns a watch id. |
+
+Full input schemas are in [`src/mcp/tools/`](./src/mcp/tools/).
+
+## Example conversation
+
+```
+User:    Find me the best deal on AirPods Pro 2.
+
+Claude:  → tools/call find_best_deal { query: "AirPods Pro 2", alternatives: 2 }
+
+         Best: Amazon — $189.00 (was $249, -24%)
+           https://amazon.com/dp/B0D1XD1ZV3?tag=shopdeals-20
+           Price hit a 90-day low yesterday.
+
+         Also:
+           Best Buy   $199.99   code MEMORIAL20 → $179.99
+           Walmart    $204.00
 ```
 
-## The 5 tools
+That's one tool call. The agent gets a structured object with `best`, `alternatives`, `priceHistory`, and `appliedCoupons` — it formats the answer.
 
-| Tool                  | What it does                                                       | Example input                                                       |
-| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| `find_deals`          | Search active deals by merchant, domain, or category               | `{ "merchant": "nike", "country": "US" }`                           |
-| `get_deal`            | Fetch a single deal by id, including stack rules and attribution   | `{ "dealId": "9b1c…" }`                                             |
-| `list_merchants`      | Browse merchants with at least one active deal                     | `{ "category": "apparel", "country": "US" }`                        |
-| `get_price_history`   | Return price observations for an ASIN or product URL (Keepa-backed) | `{ "asin": "B0CHX1W1XY", "days": 90 }`                              |
-| `report_code_result`  | Telemetry: tell the server whether a code worked at checkout       | `{ "dealId": "9b1c…", "worked": true, "effectiveDiscountCents": 1500 }` |
+## Self-hosting
 
-## Quickstart
+shopdeals runs anywhere Node 22 and a Postgres 16 connection string can. The repo ships with a `Dockerfile`, a `railway.json`, and a `fly.toml` covering the common deploys.
 
-Requires Node 22+, npm, and a Postgres 16 database (Neon free tier is fine).
+### Locally
 
 ```bash
-git clone https://github.com/idanmann10/snap-ai.git
-cd snap-ai
-cp .env.example .env          # fill in DATABASE_URL at minimum
+git clone https://github.com/idanmann10/Snap-AI.git shopdeals
+cd shopdeals
+cp .env.example .env          # at minimum, set DATABASE_URL
 npm install
-npm run db:migrate            # applies the Drizzle schema
-npm run ingest                # one-shot pull from any source whose keys you set
+npm run db:migrate
 npm run dev                   # MCP server on http://localhost:3000/mcp
 ```
 
-Then point your agent at `http://localhost:3000/mcp` using whichever client config above.
+### Docker
 
-The required env vars are documented in [`.env.example`](./.env.example): `DATABASE_URL`, `CLERK_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, the three `STRIPE_PRICE_*` tiers, and per-source keys (`FMTC_API_KEY`, `AWIN_API_TOKEN`, `AWIN_PUBLISHER_ID`, `IMPACT_ACCOUNT_SID`, `IMPACT_AUTH_TOKEN`, `KEEPA_API_KEY`, `VOYAGE_API_KEY`).
+```bash
+docker build -t shopdeals .
+docker run --rm -p 3000:3000 --env-file .env shopdeals npm run start:prod
+```
+
+### Railway
+
+`railway.json` is wired for one-click deploy of the MCP service. A second service running `npm run ingest:prod` on a `*/15 * * * *` schedule keeps the deal catalog fresh — see [`DEPLOYMENT.md`](./DEPLOYMENT.md) for the full walkthrough.
+
+### Fly.io
+
+```bash
+fly launch --copy-config --no-deploy   # reads fly.toml
+fly secrets set DATABASE_URL=postgres://...
+fly deploy
+```
+
+### Required environment variables
+
+| Var | What it's for |
+| --- | --- |
+| `DATABASE_URL` | Postgres 16 connection string (Neon's free tier is fine). |
+| `SERPAPI_KEY` | Live Google Shopping for `find_best_deal` / `find_products`. |
+| `KEEPA_API_KEY` | Amazon price history for `get_price_history`. |
+| `COUPONAPI_KEY` | Coupon catalog (free 7-day trial at couponapi.org). |
+| `AMAZON_ASSOCIATES_TAG` | Affiliate tag appended to amazon.* links on the way out. |
+| `SKIMLINKS_PUBLISHER_ID` | Universal affiliate for non-Amazon merchants. |
+
+Every key is optional — adapters whose keys are missing are silently skipped at ingest time. The Slickdeals adapter is free and runs unconditionally. The full env surface is in [`src/lib/env.ts`](./src/lib/env.ts) and [`.env.example`](./.env.example).
 
 ## Architecture
 
 ```
-Affiliate APIs (FMTC, Awin, Impact, Keepa)
-      |  cron every 15 min
-      v
-Postgres (Neon) + Drizzle
-      |
-      v
-MCP server (Hono + @modelcontextprotocol/sdk)
-      |
-      v
-Claude / ChatGPT / Cursor agents
+  MCP client (Claude / ChatGPT / Cursor)
+            │  JSON-RPC over Streamable HTTP
+            ▼
+  Hono server  ──►  auth middleware  ──►  per-request McpContext
+            │                                     │
+            │                                     ▼
+            │                          tool handler (Drizzle / Keepa /
+            │                          SerpApi / CouponAPI / affiliate)
+            ▼
+  Postgres (Neon)  ◄── ingest cron (Railway service, every 15 min)
 ```
 
-Tables are defined in [`src/db/schema.ts`](./src/db/schema.ts): `merchants`, `deals`, `telemetry`, `prices`, `api_usage`, `ingest_runs`. Every deal carries `sourceNetwork`, `sourceId`, and `attributionSource`, plus optional `stackRules`, `geoScope`, and `segment`.
+- **Server**: Hono + `@modelcontextprotocol/sdk`, Streamable HTTP transport.
+- **Storage**: Postgres via Drizzle ORM. Schema in [`src/db/schema.ts`](./src/db/schema.ts).
+- **External APIs**: SerpApi, Keepa, CouponAPI, Awin, Impact, FMTC. Each wrapped in [`src/lib/`](./src/lib/) or [`src/sources/`](./src/sources/) with rate limiting and an in-memory LRU.
+- **Affiliate rewriter**: [`src/lib/affiliate.ts`](./src/lib/affiliate.ts) — Amazon Associates + Skimlinks, never overwrites existing referral cookies.
 
-## Data sources
-
-| Source | License / cost          | Coverage                       | Refresh cadence              |
-| ------ | ----------------------- | ------------------------------ | ---------------------------- |
-| FMTC   | $195 / month            | 23 affiliate networks aggregated | 90-day code retest           |
-| Awin   | £5 one-time signup      | Heavy EU + UK merchant base    | Near-real-time pull          |
-| Impact | Per-advertiser approval | Premium DTC brands             | Webhook + 15-min poll        |
-| Keepa  | Paid (token quota)      | Amazon price history per ASIN  | On-demand via `get_price_history` |
-
-Adapters live under `src/sources/`; see [CONTRIBUTING.md](./CONTRIBUTING.md) for the `SourceAdapter` pattern.
-
-## Trust and attribution
-
-Snap-AI never overwrites affiliate cookies, never injects its own deeplink in place of an upstream creator's, and never strips an existing referral. Every deal returned from the MCP includes an `attributionSource` field — this is the upstream network or publisher that earned the credit, and downstream agents are expected to honour it.
-
-The Honey collapse made it concrete what "agentic shopping" looks like when attribution is treated as optional. We're building on the opposite assumption: the publisher who surfaced the code gets paid, full stop. If you spot a deal where the attribution looks wrong, open an issue with the deal id and we'll fix it.
-
-## Pricing (hosted version)
-
-| Tier    | Monthly tool calls | Price          |
-| ------- | ------------------ | -------------- |
-| Free    | 1,000              | $0             |
-| Starter | 25,000             | $19 / month    |
-| Pro     | 250,000            | $99 / month    |
-
-Manage your subscription via the Stripe portal at <https://mcp.snap-ai.dev/billing>.
-
-Self-host for free. Everything in this repo runs on a single Fly machine plus a Neon free-tier database.
-
-## Roadmap
-
-**v2**
-
-- Telemetry-driven verification (success rate per geo / cart size, exposed via `find_deals`).
-- Semantic dedup using Voyage AI embeddings + pgvector to collapse duplicate codes across networks.
-- More source adapters: CJ, Rakuten, Skimlinks, Partnerize.
-
-**v3**
-
-- Active checkout verification (headless validation in a sandboxed browser).
-- x402 micropayments for per-call billing without OAuth.
-- ACP feed export so agents can subscribe instead of poll.
+Deeper dive: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for local setup, the `SourceAdapter` pattern for adding a new network, and the test-fixture conventions.
+PRs welcome. Start with [`CONTRIBUTING.md`](./CONTRIBUTING.md) — short, covers the branch flow, the conventional-commit style, and the rules for adding a new affiliate-network adapter.
+
+```bash
+npm install
+npm test
+npm run typecheck
+npm run lint
+```
+
+Be excellent to each other. We follow the [Contributor Covenant 2.1](./CODE_OF_CONDUCT.md).
 
 ## License
 
-[MIT](./LICENSE) — copyright 2026 Snap-AI contributors.
+[MIT](./LICENSE) — copyright 2026 idanmann10.
+
+---
+
+<p align="center">
+  <a href="https://star-history.com/#idanmann10/Snap-AI&Date">
+    <img src="https://api.star-history.com/svg?repos=idanmann10/Snap-AI&type=Date" alt="Star History Chart" width="540" />
+  </a>
+</p>

@@ -58,9 +58,9 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
   });
   app.get('/api', (c) =>
     c.json({
-      name: 'snap-ai',
+      name: 'shopdeals',
       mcp: '/mcp',
-      docs: 'https://github.com/idanmann10/snap-ai',
+      docs: 'https://github.com/idanmann10/Snap-AI',
     }),
   );
 

@@ -1,6 +1,6 @@
 # Monetization
 
-Snap-AI is free for users. Revenue comes from affiliate commissions today, with a few low-effort B2C levers we can add when traffic justifies them.
+shopdeals is free for users. Revenue comes from affiliate commissions today, with a few low-effort B2C levers we can add when traffic justifies them.
 
 ## What earns money right now
 
@@ -31,7 +31,7 @@ After all three: every link is monetized, the deal catalog jumps from ~30 (Slick
 
 4. **Pro tier** ($5/mo or so) — early access to deals (we hold them back 30 min before publishing to free), no-ad digest, custom watchlists, multi-account API keys for affiliates / influencers running their own AIs.
 
-5. **White-label MCP** — let creators with audiences (TikTok deal accounts, newsletters) plug their own affiliate tag into a sub-instance of snap-ai and split commission. They bring traffic; we run the infra. Charge a % of their commission or a flat monthly platform fee.
+5. **White-label MCP** — let creators with audiences (TikTok deal accounts, newsletters) plug their own affiliate tag into a sub-instance of shopdeals and split commission. They bring traffic; we run the infra. Charge a % of their commission or a flat monthly platform fee.
 
 6. **Display ads on the landing page** — last resort, lowest ROI, hurts brand. Skip unless / until traffic is much higher than monetization needs.
 

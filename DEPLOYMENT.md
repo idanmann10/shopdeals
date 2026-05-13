@@ -37,7 +37,7 @@ In the Railway project that contains the web service:
 1. Click **+ New** → **GitHub Repo** → pick the same `idanmann10/Snap-AI`
    repo. Railway will use the same Dockerfile.
 2. Open the new service's **Settings**:
-   - **Service name**: `snap-ai-ingest`
+   - **Service name**: `shopdeals-ingest`
    - **Start command**: `npm run ingest:prod`
    - **Cron schedule**: `*/15 * * * *` (every 15 minutes)
    - **Restart policy**: `Never` (Railway treats cron services as one-shots)
@@ -86,7 +86,7 @@ expires/marks-stale deals.
   usage middleware doesn't yet gate requests based on plan. Free for all.
 - **API key issuance.** Keys must be minted via the Clerk dashboard until the
   signup flow ships.
-- **Domain.** `mcp.snap-ai.dev` is referenced in the README but DNS isn't
+- **Domain.** `mcp.shopdeals.sh` is referenced in the README but DNS isn't
   managed from this repo — point the CNAME at the Railway service yourself.
 
 See [README.md](./README.md) for the user-facing setup snippets (Claude

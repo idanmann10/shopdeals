@@ -1,92 +1,85 @@
-# Contributing to Snap-AI
+# Contributing to shopdeals
 
-Thanks for your interest. Snap-AI is an open-source MCP server that surfaces
-merchant-verified coupon codes from affiliate-network feeds. Contributions are
-welcome — bug reports, source adapters, docs fixes, all of it.
+Thanks for your interest. shopdeals is an MCP server that gives AI agents
+shopping superpowers — finding the best deal, watching prices, applying
+coupons. Bug reports, source adapters, docs fixes, all welcome.
 
-## Local development
+## Local setup
 
-Requirements: Node 22+, npm, a Postgres 16 instance (Neon free tier works).
+Requires Node 22+, npm, and a Postgres 16 instance (Neon's free tier works).
 
 ```bash
-git clone https://github.com/idanmann10/snap-ai.git
-cd snap-ai
-cp .env.example .env       # fill in DATABASE_URL at minimum
+git clone https://github.com/idanmann10/Snap-AI.git shopdeals
+cd shopdeals
+cp .env.example .env       # at minimum, set DATABASE_URL
 npm install
 npm run db:migrate
-npm run ingest             # one-shot: pulls from any sources whose keys you set
-npm run dev                # MCP server on http://localhost:3000
+npm run dev                # MCP server on http://localhost:3000/mcp
 ```
 
-Other useful scripts:
+Common scripts:
 
-| Script               | What it does                                 |
-| -------------------- | -------------------------------------------- |
-| `npm run typecheck`  | `tsc --noEmit`                               |
-| `npm run lint`       | ESLint, must be clean (`--max-warnings=0`)   |
-| `npm test`           | Vitest, runs once                            |
-| `npm run test:watch` | Vitest in watch mode                         |
-| `npm run build`      | Compile to `dist/` via `tsconfig.build.json` |
-| `npm run mcp:smoke`  | Smoke-test the MCP server end-to-end         |
-| `npm run db:studio`  | Drizzle Studio against your `DATABASE_URL`   |
+| Script              | What it does                                 |
+| ------------------- | -------------------------------------------- |
+| `npm test`          | Vitest, runs once                            |
+| `npm run typecheck` | `tsc --noEmit`                               |
+| `npm run lint`      | ESLint with `--max-warnings=0`               |
+| `npm run format`    | Prettier write                               |
+| `npm run mcp:smoke` | End-to-end smoke test of the MCP transport   |
+
+## Branch + PR flow
+
+1. Branch off `main` — e.g. `feat/watch-price-email` or `fix/keepa-timeout`.
+2. Open a PR against `main`. Keep diffs focused; one feature or one fix per PR.
+3. CI must be green (`npm run typecheck`, `npm test`, `npm run lint`).
+4. We squash-merge — your branch becomes one commit on `main`.
+
+## Commit + PR title style
+
+Conventional Commits. The squash-merge title is what lands on `main`, so make
+it useful in `git log --oneline`.
+
+```
+feat: add watch_price email digest
+fix(keepa): retry on transient 502
+test(landing): assert MCP endpoint badge
+docs: clarify Railway cron setup
+refactor(affiliate): extract Skimlinks rewriter
+chore: bump drizzle-kit to 0.28
+```
+
+Allowed prefixes: `feat`, `fix`, `test`, `docs`, `refactor`, `chore`,
+`perf`, `infra`, `ci`.
 
 ## Code style
 
-- TypeScript, strict mode, ESM only.
-- Prettier (`.prettierrc.json`) and ESLint (`eslint.config.js`) are the
-  source of truth — `npm run format` and `npm run lint` should both pass
-  before you push.
-- Prefer named exports. Prefer `import type { ... }` for type-only imports.
-- No `any` unless you justify it in a comment. `_`-prefixed names are
-  allowed for intentionally unused params.
+- TypeScript strict, ESM only.
+- Prettier + ESLint are the source of truth — both must pass.
+- Prefer named exports and `import type { ... }` for type-only imports.
+- No `any` without a justifying comment. `_`-prefixed names are fine for
+  intentionally unused params.
+- **No emoji in code, commits, or PR titles.** It's a house rule — keeps
+  `git log` and grep clean.
 
 ## Tests
 
-- Unit tests live in `test/` and use Vitest.
-- Source-adapter tests use [MSW](https://mswjs.io/) to stub HTTP. Fixtures
-  live under `test/fixtures/`. Snapshot real upstream payloads — never
-  hand-write them.
-- New adapters must include at least: a happy-path fixture, an empty-feed
-  fixture, and a malformed-row fixture.
+- Unit tests under `test/`, Vitest.
+- Source-adapter tests stub HTTP with [MSW](https://mswjs.io/). Fixtures live
+  in `test/fixtures/`. Capture real upstream payloads — never hand-write them.
+- New adapters need at least a happy-path, an empty-feed, and a malformed-row
+  fixture.
 
-## Adding a new affiliate network (the `SourceAdapter` pattern)
+## Adding a new affiliate-network adapter
 
-Every upstream lives in `src/sources/<network>.ts` and implements the
-`SourceAdapter` contract from `src/sources/common.ts`:
-
-```ts
-export interface SourceAdapter {
-  readonly network: SourceNetwork;        // matches the pgEnum in src/db/schema.ts
-  fetch(ctx: IngestContext): AsyncIterable<RawDeal>;
-  normalize(raw: RawDeal): NormalizedDeal; // shape Drizzle expects
-}
-```
-
-Steps to add `acmeNetwork`:
-
-1. Add `'acme'` to the `sourceNetwork` pgEnum in `src/db/schema.ts` and
-   generate a migration with `npm run db:generate`.
-2. Create `src/sources/acme.ts` that exports a default `SourceAdapter`.
-3. Wire it into `src/cron/ingest.ts` so it runs in the 15-min ingest loop.
-4. Add the env vars (e.g. `ACME_API_KEY`) to `.env.example` and to the
-   "Fly app secrets" comment in `.github/workflows/deploy.yml`.
-5. Add fixtures + tests under `test/sources/acme.test.ts`.
-6. Update the "Data sources" table in the README.
-
-The `attributionSource` field on every deal is **required** — it must
-identify the upstream network so downstream agents can credit the right
-publisher (see the trust section in the README).
+See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md#adding-a-source-adapter)
+for the `SourceAdapter` contract and the wiring checklist.
 
 ## Reporting issues
 
-Please include:
+Use [`.github/ISSUE_TEMPLATE/bug_report.md`](./.github/ISSUE_TEMPLATE/bug_report.md).
+Include Node version, MCP client, the JSON-RPC request, and the response.
 
-- Node version (`node -v`)
-- The MCP client you were using (Claude Desktop, Cursor, Continue, etc.)
-- A minimal reproduction — the JSON-RPC request and the response you got
-- Any relevant logs (`LOG_LEVEL=debug npm run dev`)
+## License
 
-## Licensing
-
-By contributing you agree your contribution is licensed under the MIT
-license, the same license that covers the rest of the project.
+By contributing you agree your contribution is MIT-licensed, same as the rest
+of the project.

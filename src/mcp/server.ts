@@ -15,7 +15,7 @@ import { toToolInputSchema } from './zod-to-json.ts';
 export type { McpContext } from './context.ts';
 
 const SERVER_INFO = {
-  name: 'snap-ai',
+  name: 'shopdeals',
   version: '0.1.0',
 } as const;
 
