@@ -6,12 +6,8 @@
 import type { MiddlewareHandler } from 'hono';
 import type { AuthPrincipal, Scope } from '../auth/types.ts';
 
-export interface ScopeVariables {
-  principal: AuthPrincipal;
-}
-
 export const requireScope =
-  (scope: Scope): MiddlewareHandler<{ Variables: ScopeVariables }> =>
+  (scope: Scope): MiddlewareHandler<{ Variables: { principal: AuthPrincipal } }> =>
   async (c, next) => {
     const principal = c.get('principal') as AuthPrincipal | undefined;
     if (!principal) {
