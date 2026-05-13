@@ -25,7 +25,6 @@ Common scripts:
 | `npm run typecheck` | `tsc --noEmit`                               |
 | `npm run lint`      | ESLint with `--max-warnings=0`               |
 | `npm run format`    | Prettier write                               |
-| `npm run mcp:smoke` | End-to-end smoke test of the MCP transport   |
 
 ## Branch + PR flow
 
@@ -64,8 +63,9 @@ Allowed prefixes: `feat`, `fix`, `test`, `docs`, `refactor`, `chore`,
 ## Tests
 
 - Unit tests under `test/`, Vitest.
-- Source-adapter tests stub HTTP with [MSW](https://mswjs.io/). Fixtures live
-  in `test/fixtures/`. Capture real upstream payloads — never hand-write them.
+- Source-adapter tests stub HTTP via `globalThis.fetch` overrides. Fixtures
+  live in `test/fixtures/` — capture real upstream payloads, never hand-write
+  them.
 - New adapters need at least a happy-path, an empty-feed, and a malformed-row
   fixture.
 
