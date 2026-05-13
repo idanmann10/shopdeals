@@ -539,8 +539,9 @@ export function landingHtml(data: LandingData = {}): string {
     transition: background .4s ease, color .4s ease, border-color .2s ease;
   }
   .fcard:hover { border-color: var(--line-strong); }
-  .fcard .fc-top { cursor: pointer; user-select: none; outline: none; }
-  .fcard .fc-top:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 6px; }
+  .fcard:not(.expanded) { cursor: pointer; user-select: none; }
+  .fcard:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+  .fcard:focus { outline: none; }
   .fcard.expanded { padding: 32px; }
   .fcard.expanded.theme-pink { background: var(--pink-card); color: #1a120c; border-color: transparent; }
   .fcard.expanded.theme-pink .fc-pill { background: rgba(26,18,12,0.08); color: #1a120c; }
@@ -982,7 +983,7 @@ export function landingHtml(data: LandingData = {}): string {
           <span class="avatar">IM</span>
           <div class="col">
             <div class="who">You</div>
-            <div class="text">What's the best deal on Sony WH-1000XM5 headphones right now? I'd rather not pay more than $300.</div>
+            <div class="text">Find me the best deal on Sony WH-1000XM5 headphones. Stay under $300 if you can, and double-check that any coupon you find actually works at checkout.</div>
           </div>
         </div>
 
@@ -990,7 +991,7 @@ export function landingHtml(data: LandingData = {}): string {
           <span class="avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.304 3.541h-3.672l6.696 16.918H24Zm-10.608 0L0 20.459h3.744l1.37-3.553h7.005l1.369 3.553h3.744L10.536 3.541Zm-.371 10.223L8.616 7.82l2.291 5.945Z"/></svg></span>
           <div class="col">
             <div class="who">Claude</div>
-            <div class="text">Let me check across sellers and apply working coupons.</div>
+            <div class="text">I'll compare live sellers, then verify the best coupon for the winner.</div>
 
             <div class="tool-call">
               <div class="tc-head">
@@ -1003,8 +1004,7 @@ export function landingHtml(data: LandingData = {}): string {
               <div class="tc-body">
                 <div>{</div>
                 <div style="padding-left: 16px;"><span class="k">query</span>: <span class="s">"Sony WH-1000XM5"</span>,</div>
-                <div style="padding-left: 16px;"><span class="k">maxPriceCents</span>: <span class="n">30000</span>,</div>
-                <div style="padding-left: 16px;"><span class="k">applyCoupons</span>: <span class="b">true</span></div>
+                <div style="padding-left: 16px;"><span class="k">alternatives</span>: <span class="n">3</span></div>
                 <div>}</div>
               </div>
             </div>
@@ -1019,7 +1019,7 @@ export function landingHtml(data: LandingData = {}): string {
                 <tr><td>Best Buy</td><td>$349.99</td><td>$349.99</td><td>—</td></tr>
                 <tr class="best">
                   <td><span class="star">★</span>Amazon</td>
-                  <td><span class="strike">$399</span>$298.00</td>
+                  <td><span class="strike">$399</span>$323.00</td>
                   <td>$298.00</td>
                   <td><span class="save">SAVE25</span></td>
                 </tr>
@@ -1027,8 +1027,28 @@ export function landingHtml(data: LandingData = {}): string {
               </tbody>
             </table>
 
+            <div class="text" style="margin-top: 16px;">Amazon looks best. Let me double-check the SAVE25 coupon before I recommend it.</div>
+
+            <div class="tool-call">
+              <div class="tc-head">
+                <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                <span class="name">get_code_for_url</span>
+                <svg class="arrow-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                <span class="upstream">shopdeals · MCP</span>
+                <span class="ms">128 ms</span>
+              </div>
+              <div class="tc-body">
+                <div>{</div>
+                <div style="padding-left: 16px;"><span class="k">url</span>: <span class="s">"https://www.amazon.com/dp/B09XS7JWHH"</span>,</div>
+                <div style="padding-left: 16px;"><span class="k">limit</span>: <span class="n">3</span></div>
+                <div>}</div>
+              </div>
+            </div>
+
+            <div class="meta-line"><span class="check">✓</span> SAVE25 — 92% success rate over 421 agent reports in the last 30 days</div>
+
             <div class="text" style="margin-top: 16px;">
-              The best deal is <strong>Amazon at $298.00</strong> — comfortably under your $300 cap, $51 below Best Buy, and the <span class="inline-code">SAVE25</span> code stacks at checkout (verified working 4 minutes ago). It ships free with Prime.
+              The best deal is <strong>Amazon at $298.00</strong> after the <span class="inline-code">SAVE25</span> code — $51 below Best Buy and comfortably under your $300 cap. The coupon is verified working at checkout (92% success rate, agents have run it 421 times in the last month). Ships free with Prime.
             </div>
             <div class="text" style="margin-top: 12px;">
               <a href="#install">Open the buy link →</a>
@@ -1471,24 +1491,30 @@ export function landingHtml(data: LandingData = {}): string {
     });
   }
 
-  /* ---------- Feature cards: click to expand ---------- */
+  /* ---------- Feature cards: click anywhere on a collapsed card to expand ---------- */
   const featureGrid = document.querySelector('.features-grid');
   if (featureGrid) {
     const cards = Array.from(featureGrid.querySelectorAll('.fcard'));
     cards.forEach((card) => {
-      const header = card.querySelector('.fc-top');
       const onActivate = () => {
         if (card.classList.contains('expanded')) return;
         cards.forEach((c) => c.classList.remove('expanded'));
         card.classList.add('expanded');
         featureGrid.setAttribute('data-active', card.dataset.key || '');
       };
-      header && header.addEventListener('click', onActivate);
+      card.addEventListener('click', (e) => {
+        // Let the CTA link (and anything else interactive inside the card)
+        // behave normally once the card is already expanded.
+        if (card.classList.contains('expanded') && (e.target.closest('a, button'))) {
+          return;
+        }
+        onActivate();
+      });
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivate(); }
       });
-      header && header.setAttribute('tabindex', '0');
-      header && header.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('role', 'button');
     });
   }
 

@@ -15,7 +15,6 @@ import { authMiddleware } from './middleware/auth.ts';
 import { usageMiddleware } from './middleware/usage.ts';
 import { globalMcpRateLimiter } from './lib/rate-limit.ts';
 import { db } from './db/client.ts';
-import { env } from './lib/env.ts';
 import { log } from './lib/log.ts';
 import { KeepaClient } from './sources/keepa.ts';
 import { landingHtml } from './landing/page.ts';
@@ -32,14 +31,16 @@ export interface BuildAppOptions {
   resolveContext?: (c: Context) => Promise<McpContext | Response>;
 
   /**
-   * Permit unauthenticated requests as anonymous read-only principals (only honored
-   * in non-production). Defaults to `true` in development, `false` in production.
+   * Permit unauthenticated requests as anonymous read-only principals. The route
+   * allowlist in `isAnonymousAllowed` decides which paths anonymous can reach in
+   * production (currently `/`, `/api`, `/healthz`, `/v1/oauth/*`, `/mcp*`); other
+   * routes still return 401. Defaults to `true`.
    */
   allowAnonymous?: boolean;
 }
 
 export function buildApp(opts: BuildAppOptions = {}): Hono {
-  const allowAnonymous = opts.allowAnonymous ?? env().NODE_ENV !== 'production';
+  const allowAnonymous = opts.allowAnonymous ?? true;
 
   const app = new Hono();
 
@@ -69,12 +70,17 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
 
   // Global rate limit on /mcp* — guards against runaway loops and scraping
   // even before the request reaches the MCP protocol layer. Returns a clean
-  // 429 with `Retry-After` so well-behaved clients back off. Auth middleware
-  // has already set `principal` (or returned 401), so we can key directly off
-  // `clientHash` (which is `'anonymous'` for unauthenticated dev traffic).
+  // 429 with `Retry-After` so well-behaved clients back off. Anonymous traffic
+  // (no API key — the documented free-tier path) is bucketed per source IP so
+  // one looping client can't starve everyone else who's sharing the
+  // `'anonymous'` clientHash.
   app.use('/mcp*', async (c: Context, next) => {
     const principal = c.get('principal') as AuthPrincipal;
-    const result = globalMcpRateLimiter.consume(principal.clientHash);
+    const key =
+      principal.source === 'anonymous'
+        ? `anon:${clientIp(c) ?? 'unknown'}`
+        : principal.clientHash;
+    const result = globalMcpRateLimiter.consume(key);
     if (!result.ok) {
       return c.json(
         {
@@ -108,6 +114,19 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
 const keepaClient = new KeepaClient();
 const affiliateRewriter = createAffiliateRewriter();
 const serpApiClient = new SerpApiClient();
+
+function clientIp(c: Context): string | undefined {
+  const fwd = c.req.header('x-forwarded-for');
+  if (fwd) {
+    const first = fwd.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return (
+    c.req.header('cf-connecting-ip') ??
+    c.req.header('x-real-ip') ??
+    undefined
+  );
+}
 
 async function deriveMcpContext(c: Context): Promise<McpContext> {
   // `principal` is guaranteed by `authMiddleware`: it either sets one or

@@ -116,27 +116,39 @@ Ten MCP tools, all spec-compliant. Inputs are Zod-validated, outputs are structu
 
 ## Example conversation
 
-```
-You:     What's the best deal on Sony WH-1000XM5 headphones right now?
-         I'd rather not pay more than $300.
+Paste this prompt into Claude / ChatGPT / Cursor with shopdeals connected:
 
-Claude:  → tools/call find_best_deal {
-           query: "Sony WH-1000XM5",
-           maxPriceCents: 30000,
-           applyCoupons: true
-         }
+> Find me the best deal on Sony WH-1000XM5 headphones. Stay under $300 if you
+> can, and double-check that any coupon you find actually works at checkout.
+
+The agent picks the tools — typically `find_best_deal` to compare sellers,
+then `get_code_for_url` to verify the winning coupon.
+
+```
+You:     Find me the best deal on Sony WH-1000XM5 headphones. Stay under
+         $300 if you can, and double-check that any coupon you find actually
+         works at checkout.
+
+Claude:  → tools/call find_best_deal { query: "Sony WH-1000XM5", alternatives: 3 }
          (412 ms · 3 sellers · 49 merchants checked)
 
          Best Buy   $349.99
-         Amazon     $399 → $298.00  code SAVE25  ★
+         Amazon     $399 → $323.00  code SAVE25 → effective $298.00  ★
          Target     $329.99
 
-         The best deal is Amazon at $298.00 — comfortably under your
-         $300 cap, $51 below Best Buy, and the SAVE25 code stacks at
-         checkout (verified working 4 minutes ago). Ships free with Prime.
+         → tools/call get_code_for_url {
+             url: "https://www.amazon.com/dp/B09XS7JWHH", limit: 3
+           }
+         (128 ms · SAVE25 92% success rate over 421 agent reports / 30d)
+
+         The best deal is Amazon at $298.00 after SAVE25 — $51 below Best
+         Buy and comfortably under your $300 cap. The coupon is verified
+         working at checkout (92% success rate). Ships free with Prime.
 ```
 
-One tool call. The agent receives a structured object with `best`, `alternatives`, `priceHistory`, and `appliedCoupons` — it phrases the answer.
+Two tool calls. `find_best_deal` returns a structured `{ best, alternatives,
+appliedCoupons }`; `get_code_for_url` returns the live success rate so the
+agent can vouch for the code before recommending it.
 
 ---
 
