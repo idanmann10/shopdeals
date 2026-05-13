@@ -24,9 +24,7 @@ export async function loadLandingStats(database: Db): Promise<LandingData> {
         (SELECT EXTRACT(EPOCH FROM (now() - max(finished_at))) / 3600
            FROM ingest_runs WHERE status = 'completed') AS last_ingest_hours_ago
     `);
-    const row = (result as unknown as { rows?: unknown[] }).rows?.[0] as
-      | { deal_count: unknown; merchant_count: unknown; last_ingest_hours_ago: unknown }
-      | undefined;
+    const row = result.rows[0];
     if (!row) return {};
     const stats: LandingData = {
       dealCount: toNumber(row.deal_count) ?? 0,

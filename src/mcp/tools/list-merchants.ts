@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { and, arrayOverlaps, asc, eq, gt, or, sql } from 'drizzle-orm';
+import { and, arrayOverlaps, asc, eq, gt, or, sql, type SQL } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
 import { decodeCursor, encodeCursor } from '../cursor.ts';
@@ -45,7 +45,7 @@ export async function handler(
   input: ListMerchantsInput,
   ctx: McpContext,
 ): Promise<ListMerchantsResult> {
-  const conditions = [] as Array<ReturnType<typeof eq>>;
+  const conditions: SQL[] = [];
 
   if (input.category) {
     conditions.push(arrayOverlaps(merchants.categories, [input.category]));
@@ -57,17 +57,16 @@ export async function handler(
 
   if (input.query) {
     const needle = `%${input.query}%`;
-    conditions.push(sql`${merchants.displayName} ILIKE ${needle}` as unknown as ReturnType<typeof eq>);
+    conditions.push(sql`${merchants.displayName} ILIKE ${needle}`);
   }
 
   const cursor = decodeCursor<CursorPayload>(input.cursor);
   if (cursor) {
-    conditions.push(
-      or(
-        gt(merchants.displayName, cursor.displayName),
-        and(eq(merchants.displayName, cursor.displayName), gt(merchants.id, cursor.id)),
-      )! as unknown as ReturnType<typeof eq>,
+    const orExpr = or(
+      gt(merchants.displayName, cursor.displayName),
+      and(eq(merchants.displayName, cursor.displayName), gt(merchants.id, cursor.id)),
     );
+    if (orExpr) conditions.push(orExpr);
   }
 
   // Correlated EXISTS subquery for `hasActiveDeals`. Uses fully-qualified

@@ -8,7 +8,7 @@
 
 import { z } from 'zod';
 
-export interface JsonSchemaObject extends AnyJsonSchema {
+interface JsonSchemaObject extends AnyJsonSchema {
   type: 'object';
   properties?: Record<string, unknown>;
   required?: string[];
@@ -16,7 +16,7 @@ export interface JsonSchemaObject extends AnyJsonSchema {
   description?: string;
 }
 
-export interface AnyJsonSchema {
+interface AnyJsonSchema {
   [k: string]: unknown;
 }
 
@@ -122,7 +122,7 @@ function convert(schema: z.ZodTypeAny): AnyJsonSchema {
   return out;
 }
 
-export function zodObjectToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): JsonSchemaObject {
+function zodObjectToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): JsonSchemaObject {
   const shape = schema.shape;
   const properties: Record<string, unknown> = {};
   const required: string[] = [];

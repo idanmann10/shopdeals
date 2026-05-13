@@ -1,10 +1,8 @@
 /**
- * Auth types shared across the auth + billing layer.
+ * Auth types: `AuthPrincipal`, `Scope`, `Plan`, `StoredApiKey`, `AuthError`.
  *
- * Scope strings are stable identifiers used in:
- *   - Clerk org/user `publicMetadata.apiKeys[].scopes`
- *   - HTTP middleware (`requireScope`)
- *   - Plan defaults (`defaultScopesFor`)
+ * Scope strings are stable identifiers persisted in Clerk org/user
+ * `publicMetadata.apiKeys[].scopes` and checked by `requireScope`.
  */
 
 export type Scope = 'deals:read' | 'deals:contribute' | 'prices:read' | 'admin';

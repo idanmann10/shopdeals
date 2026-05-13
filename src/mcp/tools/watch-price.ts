@@ -1,19 +1,13 @@
 /**
- * `watch_price` — persists a "tell me when X hits $Y" request keyed to the
- * calling agent's clientHash. A future cron worker will walk `price_watches`
+ * `watch_price` — persists a "notify me when X hits $Y" request keyed to
+ * the calling agent's clientHash. A cron worker walks `price_watches`
  * rows where `is_active=true` and the last check is older than 6 hours,
- * re-run a SerpApi check, and notify via email/webhook when
+ * re-runs a SerpApi check, and notifies via email/webhook when
  * `currentTotal <= targetPriceCents`.
  *
- * Why this is the killer agent-only feature:
- *   - Browser extensions can't watch prices (they only fire when the user
- *     opens a page). Agents can be told once and the server takes over.
- *   - It's the most natural way for users to convert from "I asked once"
- *     to "this is bookmarked in my AI." That's stickiness.
- *
- * v1 ships the persistence + the contract; the notify-cron worker lands in
- * a follow-up PR. The watchId returned from this tool is forever-stable —
- * agents can re-fetch / list / cancel by id.
+ * The notify-cron worker is not yet wired in this repo; this tool ships
+ * the persistence + contract so agents can register watches against a
+ * stable watchId.
  */
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
@@ -21,6 +15,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import type { McpContext } from '../context.ts';
 import { priceWatches } from '../../db/schema.ts';
 import { log } from '../../lib/log.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'watch_price';
 
@@ -65,9 +60,7 @@ export async function handler(
   input: WatchPriceInput,
   ctx: McpContext,
 ): Promise<WatchPriceResult> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
   // Enforce a per-client cap. Without this, an agent looping through every
   // product on a page could persist thousands of watches and DOS our cron.

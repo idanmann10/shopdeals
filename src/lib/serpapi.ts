@@ -211,12 +211,12 @@ export class SerpApiClient {
   constructor(opts: SerpApiOptions = {}) {
     const e = (() => {
       try {
-        return env() as unknown as Record<string, string | undefined>;
+        return env();
       } catch {
         return undefined;
       }
     })();
-    this.apiKey = opts.apiKey ?? e?.['SERPAPI_KEY'] ?? '';
+    this.apiKey = opts.apiKey ?? e?.SERPAPI_KEY ?? '';
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.baseUrl = (opts.baseUrl ?? 'https://serpapi.com').replace(/\/+$/, '');
     this.timeoutMs = opts.timeoutMs ?? 15_000;

@@ -240,7 +240,7 @@ export const priceWatches = pgTable(
     targetPriceCents: integer('target_price_cents').notNull(),
     /** Optional country scope for the watch. */
     countryCode: varchar('country_code', { length: 2 }),
-    /** Where to deliver the notification — for v1 only email is supported. */
+    /** Where to deliver the notification. */
     notifyEmail: varchar('notify_email', { length: 320 }),
     notifyWebhook: text('notify_webhook'),
     /** UTC timestamp of the last check the cron made. */
@@ -278,5 +278,4 @@ export type NewIngestRun = typeof ingestRuns.$inferInsert;
 export type PriceWatch = typeof priceWatches.$inferSelect;
 export type NewPriceWatch = typeof priceWatches.$inferInsert;
 
-// Composite primary key not used; left here for future dedup_pairs etc.
 export const _exports = { primaryKey };

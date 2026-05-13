@@ -1,33 +1,20 @@
 /**
- * `redeem_link` — wrap any merchant URL through our affiliate layer so the
- * agent's "buy" links earn commission even when WE didn't surface the deal.
+ * `redeem_link` — wrap any merchant URL through `ctx.affiliate.rewrite`,
+ * report which program got applied (Amazon Associates / Skimlinks / noop),
+ * and when the merchant is in our catalog, surface the top active code so
+ * the agent can hint at it inline.
  *
- * Why this matters: today, money flows only when find_deals / find_best_deal
- * / find_products return a buyLink that the user clicks. But agents
- * routinely encounter merchant URLs from other sources — user pastes a
- * Best Buy URL from a friend, the agent finds something on a forum and
- * wants to recommend it, etc. Without this tool, the agent has no way to
- * "shopdeals-ify" those URLs, so the commission goes to whoever owns the
- * original tracking (often nobody — i.e., revenue is left on the table).
- *
- * What it does:
- *   - Run the URL through `ctx.affiliate.rewrite` (same logic as
- *     find_best_deal / find_products).
- *   - Surface which program got applied (Amazon Associates / Skimlinks /
- *     no-op for community URLs).
- *   - When the merchant is in our catalog, hint at active codes via a
- *     `codeHint` field — the agent can call `get_code_for_url` for the
- *     full list.
- *
- * Privacy note: this tool only sees the URL, never the user's identity or
- * payment info. The affiliate ID is bound to the server, not the agent.
+ * Privacy: only the URL is read — never the user's identity or payment info.
+ * The affiliate ID is bound to the server, not the agent.
  */
 import { z } from 'zod';
-import { and, eq, inArray, isNull, or, gt } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { urlToMerchantSlug } from './get-code-for-url.ts';
+import { requireScope } from '../scope.ts';
+import type { CodeRef } from './types.ts';
 
 export const name = 'redeem_link';
 
@@ -54,26 +41,22 @@ export interface RedeemLinkResult extends Record<string, unknown> {
   /** Quick yes/no — do we have active codes for this merchant right now? */
   hasActiveCodes: boolean;
   /** When `hasActiveCodes` is true, the top code so the agent can surface it inline. */
-  topCode?: { code: string; title: string; dealId: string };
+  topCode?: CodeRef;
 }
 
 export async function handler(
   input: RedeemLinkInput,
   ctx: McpContext,
 ): Promise<RedeemLinkResult> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
-  // 1) Always-run: affiliate rewrite. This is the money path — works even
-  // when the URL doesn't map to a merchant in our catalog (Skimlinks
-  // covers thousands of long-tail merchants).
+  // Always rewrite, even for URLs not in our catalog — Skimlinks covers
+  // the long tail.
   const rewriter = ctx.affiliate;
   const { url: buyLink, applied } = rewriter
     ? rewriter.rewrite(input.url)
     : { url: input.url, applied: 'noop' as const };
 
-  // 2) Catalog lookup: do we have a known merchant + active codes for this URL?
   const extracted = urlToMerchantSlug(input.url);
   const result: RedeemLinkResult = {
     inputUrl: input.url,
@@ -99,9 +82,8 @@ export async function handler(
     .where(
       and(
         inArray(merchants.slug, candidateSlugs),
-        eq(deals.isActive, true),
         eq(deals.kind, 'code'),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
+        dealIsActive(),
       ),
     )
     .limit(1);

@@ -1,34 +1,23 @@
 /**
- * `get_code_for_url` — closes the buy-side loop.
+ * `get_code_for_url` — given a merchant URL, return active code-kind deals
+ * for that merchant ranked by parsed discount magnitude.
  *
- * The agent (or the user) has a merchant URL. They want to know: what code
- * applies HERE, RIGHT NOW. We extract the merchant from the URL's host,
- * look up active code-kind deals for that merchant in our catalog, and
- * return them ranked by parsed discount magnitude.
+ * Merchant slug is derived from the URL host:
+ *   amazon.com / www.amazon.com / smile.amazon.com → amazon
+ *   www.bestbuy.com / bestbuy.com                  → bestbuy
+ *   shop.target.com / www.target.com               → target
  *
- * This is what makes the agent able to *finish* a purchase, not just point
- * at one. Without this tool, the agent's only path to surfacing a code is
- * to first call find_deals / find_best_deal with the right merchant slug
- * — but it has to GUESS the slug, and the user often pastes URLs we never
- * surfaced.
- *
- * The merchant slug is derived from the URL host:
- *   amazon.com  / www.amazon.com  / smile.amazon.com  → amazon
- *   www.bestbuy.com                                    → bestbuy
- *   bestbuy.com                                        → bestbuy
- *   www.target.com / shop.target.com                   → target
- *
- * For Amazon URLs we additionally extract the ASIN so the agent can pass
- * it to `get_price_history` for a price-low signal without a second
- * round-trip.
+ * For Amazon URLs the ASIN is also extracted so the agent can pass it to
+ * `get_price_history` without a second round-trip.
  */
 import { z } from 'zod';
-import { and, eq, inArray, isNull, or, gt, sql } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { extractAmazonAsin } from '../../lib/affiliate.ts';
 import { discountSummary } from '../format.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'get_code_for_url';
 
@@ -104,9 +93,7 @@ export async function handler(
   input: GetCodeForUrlInput,
   ctx: McpContext,
 ): Promise<GetCodeForUrlResult> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
   const extracted = urlToMerchantSlug(input.url);
   if (!extracted) {
@@ -146,9 +133,8 @@ export async function handler(
     .where(
       and(
         inArray(merchants.slug, candidateSlugs),
-        eq(deals.isActive, true),
         eq(deals.kind, 'code'),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
+        dealIsActive(),
       ),
     )
     .orderBy(sql`coalesce(${deals.successRate}, 0.5) desc`)
@@ -157,9 +143,6 @@ export async function handler(
   const merchantName = rows[0]?.merchantName;
   const asin = extractAmazonAsin(input.url);
 
-  // Build the rank: numeric discount first (clamped to "real" discounts),
-  // then success_rate (already used by the SQL order-by), then title length
-  // as a tiebreaker (shorter titles tend to be more actionable).
   const codes: CodeForUrlMatch[] = rows
     .filter((r) => r.code && r.code.trim().length > 0)
     .map((r) => {

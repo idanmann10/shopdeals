@@ -33,6 +33,7 @@ export function landingHtml(data: LandingData = {}): string {
 <meta property="og:type" content="website" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='none' stroke='%23f26b3a'><circle cx='42' cy='42' r='28' stroke-width='8'/><line x1='62' y1='62' x2='86' y2='86' stroke-width='9' stroke-linecap='round'/></g><path d='M42 24 L54 24 L54 58 L42 70 L30 58 L30 36 Z' fill='%23f26b3a'/><circle cx='42' cy='34' r='3' fill='%230e0f0c'/></svg>" />
 <style>
   :root {
     --bg: #0e0f0c;
@@ -1563,13 +1564,9 @@ export function landingHtml(data: LandingData = {}): string {
 </html>`;
 }
 
-/** Partner logos for the marquee — real monochrome brand marks rendered as
- *  inline SVG. Each mark is brand-accurate at the silhouette level; CSS dims
- *  the whole row so they read as ambient context, not endorsements. */
+/** Partner logos for the marquee — inline SVG brand marks. CSS dims the row
+ *  so they read as ambient context, not endorsements. */
 function partnersRow(): string {
-  // Brand mark + wordmark composite. Each item renders the mark (24px square)
-  // followed by the brand name in the page's system font, so the row reads
-  // as "icon + name" rather than just abstract glyphs.
   const items: Array<{ name: string; svg: string }> = [
     {
       name: 'Claude',

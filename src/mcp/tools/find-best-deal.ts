@@ -1,38 +1,30 @@
 /**
- * `find_best_deal` — the killer tool.
+ * `find_best_deal` — returns the single best buy for a product query, plus
+ * a few alternatives. Pipeline:
  *
- * One MCP call takes a product query ("AirPods Pro under $250") and
- * returns the single best buy + a few alternatives, with every link
- * affiliate-tagged. Behind the scenes:
+ *   1. SerpApi `google_shopping` for candidate products.
+ *   2. SerpApi `google_immersive_product` for each candidate → per-seller
+ *      real merchant URLs + total (price + shipping). The legacy
+ *      `google_product` engine is retired; immersive is the only path to
+ *      direct merchant links.
+ *   3. For Amazon sellers with an extractable ASIN, Keepa → 30/90-day low
+ *      signals.
+ *   4. Cross-match merchant slug against our active coupon catalog.
+ *   5. Rank by effective total (merchant total minus best applicable code).
  *
- *   1. SerpApi `google_shopping` → top product candidate
- *   2. SerpApi `google_immersive_product` → real merchant URLs + per-seller
- *      total cost (price + shipping)
- *   3. For Amazon sellers, extract ASIN → Keepa → flag 30/90-day lows
- *   4. Cross-match our DB coupon catalog by merchant slug, apply best code
- *   5. Compute effective total = merchant_total − code_discount
- *   6. Rank ascending, return top N
- *
- * Failure modes:
- *   - SerpApi not configured → graceful note, empty results
- *   - SerpApi search returns nothing → empty results
- *   - Immersive call fails → fall back to the shopping-results level
- *     (no per-seller totals, but at least we surface the best price we saw)
- *   - Keepa not configured or rate-limited → skip the price-low signals
- *
- * Cost: 2 SerpApi credits per call (1 search + 1 immersive). Free plan
- * is 250/mo = 125 best-deal queries. Starter at $25/mo is 500 queries.
+ * Cost: up to ~4 SerpApi credits per call (1 search + up to 3 immersive).
  */
 import { z } from 'zod';
-import { and, eq, gt, inArray, isNull, or } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { SerpApiClient, type SellerOffer } from '../../lib/serpapi.ts';
 import { extractAmazonAsin } from '../../lib/affiliate.ts';
 import { KeepaClient } from '../../sources/keepa.ts';
 import { log } from '../../lib/log.ts';
 import { serpApiRateLimiter } from '../../lib/rate-limit.ts';
+import { requireScope } from '../scope.ts';
 
 export const name = 'find_best_deal';
 
@@ -102,14 +94,9 @@ export async function handler(
   input: FindBestDealInput,
   ctx: McpContext,
 ): Promise<FindBestDealResult> {
-  // Same scope as find_deals — the heavy lifting happens against the public
-  // shopping APIs, but we still join against our private coupon catalog.
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+  requireScope(ctx, 'deals:read');
 
-  // Rate limit: each call burns up to 2 SerpApi credits. Without this a
-  // looping agent could torch our monthly budget in minutes.
+  // Rate-limit before any SerpApi spend — each call burns up to 4 credits.
   serpApiRateLimiter.consumeOrThrow(ctx.clientHash, 'find_best_deal');
 
   const t0 = performance.now();
@@ -125,10 +112,9 @@ export async function handler(
     }, t0);
   }
 
-  // Step 1: one search to find candidate products. Ask for 8 — Google's
-  // ranking puts what it considers most relevant first, but for "shop
-  // anything" queries the absolute cheapest is often the 3rd or 4th
-  // result (different brand, similar specs).
+  // Ask for 8 candidates — for "shop anything" queries the cheapest option
+  // is often a few results down from Google's top pick (different brand,
+  // similar specs).
   let shoppingResults;
   try {
     shoppingResults = await serpapi.search({
@@ -154,13 +140,9 @@ export async function handler(
     return finalize({ query: input.query, alternatives: [], meta }, t0);
   }
 
-  // Step 2: shortlist the top candidates by SerpApi's reported price
-  // (free — uses data we already have). Then fan out immersive lookups
-  // in parallel to get per-seller real merchant URLs + total prices.
-  //
-  // We evaluate up to MAX_CANDIDATES products. Each immersive call is
-  // one SerpApi credit, so total cost = 1 (search) + N (immersives)
-  // credits per query. The cache makes repeats free.
+  // Shortlist by SerpApi's reported price (free — we already have it), then
+  // fan out immersive lookups in parallel. Each immersive is one credit; the
+  // cache makes repeats free.
   const MAX_CANDIDATES = 3;
   const withTokens = shoppingResults.filter((r) => r.immersiveToken);
   const candidates = withTokens
@@ -173,11 +155,9 @@ export async function handler(
     .slice(0, MAX_CANDIDATES);
   const productTitle = candidates[0]?.title ?? shoppingResults[0]?.title;
 
-  // Per-candidate timeout: race each immersive call against a 5s deadline.
-  // A slow candidate returns empty (and its promise still resolves in the
-  // background, warming the cache for next time) — we never block the
-  // whole query waiting for a straggler. The cheapest candidate that DID
-  // respond wins, even if others are still pending.
+  // Race each immersive call against a 5s deadline. A slow candidate
+  // returns empty (its promise still resolves in the background and warms
+  // the cache); we never block on a straggler.
   const IMMERSIVE_DEADLINE_MS = 5000;
   const immersiveResults = await Promise.all(
     candidates.map((c) => {
@@ -240,9 +220,8 @@ export async function handler(
     return finalize({ query: input.query, alternatives: [], meta }, t0);
   }
 
-  // Steps 2 + 3 run in parallel — coupon cross-match (DB) and Keepa
-  // price-low signals (HTTP) don't depend on each other. Before this
-  // change they ran sequentially and cost ~200-400ms on cold Keepa hits.
+  // Coupon cross-match (DB) and Keepa price-low signals (HTTP) are independent —
+  // fan them out in parallel to avoid serializing the cold-Keepa latency.
   const slugs = Array.from(new Set(offers.map((o) => o.merchantSlug).filter((s) => s.length > 0)));
   const keepa = ctx.keepa ?? new KeepaClient();
 
@@ -263,7 +242,6 @@ export async function handler(
 
   meta.couponsMatched = Array.from(codesBySlug.values()).reduce((n, arr) => n + arr.length, 0);
 
-  // Step 4: build the per-option payload, compute effective total, sort.
   const ranked: BestDealOption[] = offers.map((o) => {
     const codes = codesBySlug.get(o.merchantSlug) ?? [];
     const best = codes[0];
@@ -444,13 +422,7 @@ async function loadCodesForSlugs(
     })
     .from(deals)
     .innerJoin(merchants, eq(deals.merchantId, merchants.id))
-    .where(
-      and(
-        inArray(merchants.slug, slugs),
-        eq(deals.isActive, true),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
-      ),
-    )
+    .where(and(inArray(merchants.slug, slugs), dealIsActive()))
     .limit(200);
 
   const out = new Map<string, CodeMatch[]>();
@@ -466,10 +438,8 @@ async function loadCodesForSlugs(
     if (r.discountValueCents != null && r.discountValueCents > 0) {
       item.estimatedDiscountCents = r.discountValueCents;
     } else if (r.discountValueBps != null && r.discountValueBps > 0) {
-      // Stash as a basis-points hint; we apply against priceCents at usage
-      // time in the caller's projection (currently we treat it as a flat
-      // dollar value scaled to a "typical" $100 cart so the ranker has
-      // something to sort on — fine for the v1).
+      // Approximate a bps discount against a "typical" $100 cart so the
+      // ranker has a comparable cents value to sort on.
       item.estimatedDiscountCents = Math.round(r.discountValueBps * 0.01 * 100);
     }
     list.push(item);

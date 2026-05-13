@@ -21,13 +21,15 @@
  * Agents should prefer it for that phrasing; this tool is the catalog view.
  */
 import { z } from 'zod';
-import { and, eq, inArray, isNull, or, gt } from 'drizzle-orm';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { SerpApiClient, type SellerOffer, type ShoppingResult } from '../../lib/serpapi.ts';
 import { log } from '../../lib/log.ts';
 import { serpApiRateLimiter } from '../../lib/rate-limit.ts';
+import { requireScope } from '../scope.ts';
+import type { CodeRef } from './types.ts';
 
 export const name = 'find_products';
 
@@ -55,7 +57,7 @@ export interface FindProductsItem {
   delivery?: string;
   thumbnail?: string;
   /** Working coupon codes from our catalog matched by merchant slug. */
-  codes?: Array<{ code: string; title: string; dealId: string }>;
+  codes?: CodeRef[];
 }
 
 export interface FindProductsResult extends Record<string, unknown> {
@@ -185,7 +187,6 @@ export async function handler(
     };
     if (o.priceCents !== undefined) item.priceCents = o.priceCents;
     if (o.originalPriceCents !== undefined) item.oldPriceCents = o.originalPriceCents;
-    // Surface flags/delivery info as the `delivery` field for backward compat.
     if (o.flags.length > 0) item.delivery = o.flags.join(' · ');
     const matches = codesBySlug.get(o.merchantSlug);
     if (matches && matches.length > 0) item.codes = matches.slice(0, 3);
@@ -198,10 +199,8 @@ export async function handler(
 async function loadCodesForSlugs(
   ctx: McpContext,
   slugs: string[],
-): Promise<Map<string, Array<{ code: string; title: string; dealId: string }>>> {
-  if (!ctx.scopes.includes('deals:read')) {
-    throw new McpError(ErrorCode.InvalidRequest, 'forbidden: deals:read scope required');
-  }
+): Promise<Map<string, CodeRef[]>> {
+  requireScope(ctx, 'deals:read');
 
   const rows = await ctx.db
     .select({
@@ -215,14 +214,13 @@ async function loadCodesForSlugs(
     .where(
       and(
         inArray(merchants.slug, slugs),
-        eq(deals.isActive, true),
         eq(deals.kind, 'code'),
-        or(isNull(deals.expiresAt), gt(deals.expiresAt, new Date())),
+        dealIsActive(),
       ),
     )
     .limit(200);
 
-  const out = new Map<string, Array<{ code: string; title: string; dealId: string }>>();
+  const out = new Map<string, CodeRef[]>();
   for (const r of rows) {
     if (!r.code) continue;
     const list = out.get(r.slug) ?? [];

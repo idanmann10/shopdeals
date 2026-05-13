@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { and, arrayOverlaps, desc, eq, gt, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, arrayOverlaps, desc, eq, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import type { McpContext } from '../context.ts';
 import { deals, merchants } from '../../db/schema.ts';
+import { dealIsActive } from '../../db/predicates.ts';
 import { discountSummary, eligibilitySummary } from '../format.ts';
 import { decodeCursor, encodeCursor } from '../cursor.ts';
 
@@ -53,10 +54,7 @@ export async function handler(
   input: FindDealsInput,
   ctx: McpContext,
 ): Promise<FindDealsResult> {
-  const conditions = [
-    eq(deals.isActive, true),
-    or(isNull(deals.expiresAt), gt(deals.expiresAt, sql`now()`)),
-  ];
+  const conditions = [dealIsActive()];
 
   if (input.merchant) {
     conditions.push(eq(merchants.slug, input.merchant));
@@ -85,7 +83,7 @@ export async function handler(
 
   if (input.query) {
     // TODO: replace with embeddings-based similarity once ingestion populates
-    // `deals.embedding_digest` / a vector column. For v1 we ILIKE both fields.
+    // `deals.embedding_digest` / a vector column. ILIKE both fields for now.
     const needle = `%${input.query}%`;
     conditions.push(
       or(sql`${deals.title} ILIKE ${needle}`, sql`${deals.description} ILIKE ${needle}`)!,
@@ -129,13 +127,8 @@ export async function handler(
     .from(deals)
     .innerJoin(merchants, eq(deals.merchantId, merchants.id))
     .where(and(...conditions))
-    // NOTE: ordering is `(ingestedAt, id) DESC` only — this matches the keyset
-    // cursor payload exactly so pagination is deterministic. We previously
-    // primary-ordered by `successRate DESC NULLS LAST` but the cursor never
-    // carried `successRate`, so consecutive pages could skip or duplicate
-    // rows. For v1 we accept reverse-chronological ordering; quality ranking
-    // (e.g. success-rate weighting or a Haiku rerank) belongs in a follow-up
-    // pipeline stage that consumes this deterministic page list.
+    // Ordering must match the cursor payload `(ingestedAt, id)` exactly,
+    // otherwise consecutive pages can skip or duplicate rows.
     .orderBy(desc(deals.ingestedAt), desc(deals.id))
     .limit(input.limit + 1);
 
