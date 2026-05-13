@@ -10,8 +10,8 @@ import type { AuthPrincipal } from './types.ts';
 
 const ANONYMOUS_CLIENT_HASH = 'anonymous';
 
-const PUBLIC_ROUTE_PREFIXES = ['/healthz', '/v1/oauth/'];
-const PUBLIC_ROUTE_EXACT = new Set(['/']);
+const PUBLIC_ROUTE_PREFIXES = ['/healthz', '/v1/oauth/', '/mcp'];
+const PUBLIC_ROUTE_EXACT = new Set(['/', '/api']);
 
 export function anonymousPrincipal(): AuthPrincipal {
   return {
