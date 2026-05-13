@@ -8,7 +8,7 @@
 
 import type { AuthPrincipal } from './types.ts';
 
-export const ANONYMOUS_CLIENT_HASH = 'anonymous';
+const ANONYMOUS_CLIENT_HASH = 'anonymous';
 
 const PUBLIC_ROUTE_PREFIXES = ['/healthz', '/v1/oauth/'];
 const PUBLIC_ROUTE_EXACT = new Set(['/']);

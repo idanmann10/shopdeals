@@ -204,8 +204,3 @@ export async function mintApiKey(opts: MintApiKeyOpts): Promise<MintApiKeyResult
 export function generateRawKey(): string {
   return API_KEY_PREFIX + randomBytes(API_KEY_BYTES).toString('hex');
 }
-
-export const API_KEY_INTERNALS = {
-  API_KEY_PREFIX,
-  API_KEY_BYTES,
-} as const;

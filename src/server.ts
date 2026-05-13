@@ -7,7 +7,7 @@
 
 import { Hono } from 'hono';
 import { logger as honoLogger } from 'hono/logger';
-import type { Context, Next } from 'hono';
+import type { Context } from 'hono';
 
 import { mountMcp } from './mcp/transport.ts';
 import type { McpContext } from './mcp/context.ts';
@@ -78,11 +78,12 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
 
   // Global rate limit on /mcp* — guards against runaway loops and scraping
   // even before the request reaches the MCP protocol layer. Returns a clean
-  // 429 with `Retry-After` so well-behaved clients back off.
-  app.use('/mcp*', async (c: Context, next: Next) => {
-    const principal = c.get('principal') as AuthPrincipal | undefined;
-    const key = principal?.clientHash ?? c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'anonymous';
-    const result = globalMcpRateLimiter.consume(key);
+  // 429 with `Retry-After` so well-behaved clients back off. Auth middleware
+  // has already set `principal` (or returned 401), so we can key directly off
+  // `clientHash` (which is `'anonymous'` for unauthenticated dev traffic).
+  app.use('/mcp*', async (c: Context, next) => {
+    const principal = c.get('principal') as AuthPrincipal;
+    const result = globalMcpRateLimiter.consume(principal.clientHash);
     if (!result.ok) {
       return c.json(
         {
@@ -118,18 +119,16 @@ const affiliateRewriter = createAffiliateRewriter();
 const serpApiClient = new SerpApiClient();
 
 async function deriveMcpContext(c: Context): Promise<McpContext> {
-  const principal = c.get('principal') as AuthPrincipal | undefined;
+  // `principal` is guaranteed by `authMiddleware`: it either sets one or
+  // returns 401 before this resolver runs.
+  const principal = c.get('principal') as AuthPrincipal;
   return {
     db: db(),
-    clientHash: principal?.clientHash ?? 'anonymous',
-    ...(principal?.orgId !== undefined ? { orgId: principal.orgId } : {}),
-    scopes: principal?.scopes ?? ['deals:read'],
+    clientHash: principal.clientHash,
+    ...(principal.orgId !== undefined ? { orgId: principal.orgId } : {}),
+    scopes: principal.scopes,
     keepa: keepaClient,
     affiliate: affiliateRewriter,
     serpapi: serpApiClient,
   };
 }
-
-// Re-export `Next` so module consumers can type their own middleware without
-// reaching into 'hono' directly.
-export type { Next };

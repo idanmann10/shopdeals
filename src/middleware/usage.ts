@@ -41,14 +41,14 @@ const defaultUnitsResolver: UnitsResolver = (tool) => {
   return 1;
 };
 
-export interface UsageVariables {
+export interface UsageMiddlewareOptions {
+  units?: UnitsResolver;
+}
+
+interface UsageVariables {
   principal: AuthPrincipal;
   /** Set by the MCP transport per tool call so usage rows record the tool name. */
   mcpTool?: string;
-}
-
-export interface UsageMiddlewareOptions {
-  units?: UnitsResolver;
 }
 
 export const usageMiddleware = (

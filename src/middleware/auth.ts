@@ -6,16 +6,12 @@
  *   - Otherwise -> 401.
  */
 
-import type { Context, MiddlewareHandler } from 'hono';
+import type { MiddlewareHandler } from 'hono';
 import { parseAuthorizationHeader, verifyApiKey } from '../auth/api-key.ts';
 import { anonymousPrincipal, isAnonymousAllowed } from '../auth/anonymous.ts';
 import type { AuthPrincipal } from '../auth/types.ts';
 import { env } from '../lib/env.ts';
 import { log } from '../lib/log.ts';
-
-export interface AuthVariables {
-  principal: AuthPrincipal;
-}
 
 export interface AuthMiddlewareOptions {
   /** When set, requests without an Authorization header may pass as anonymous (dev only). */
@@ -24,7 +20,7 @@ export interface AuthMiddlewareOptions {
 
 export const authMiddleware = (
   opts: AuthMiddlewareOptions = {},
-): MiddlewareHandler<{ Variables: AuthVariables }> => {
+): MiddlewareHandler<{ Variables: { principal: AuthPrincipal } }> => {
   const allowAnonymous = opts.allowAnonymous ?? false;
 
   return async (c, next) => {
@@ -34,29 +30,19 @@ export const authMiddleware = (
     if (parsed.type === 'bearer' && parsed.token) {
       const principal = await verifyApiKey(parsed.token);
       if (!principal) {
-        log.warn(
-          { hashPrefix: principal ? undefined : 'invalid', path: c.req.path },
-          'invalid api key',
-        );
-        return jsonError(c, 401, 'invalid_api_key');
+        log.warn({ path: c.req.path }, 'invalid api key');
+        return c.json({ error: 'invalid_api_key' }, 401);
       }
       c.set('principal', principal);
       return next();
     }
 
     // No bearer.
-    if (allowAnonymous) {
-      const nodeEnv = env().NODE_ENV;
-      if (isAnonymousAllowed(c.req.path, nodeEnv)) {
-        c.set('principal', anonymousPrincipal());
-        return next();
-      }
+    if (allowAnonymous && isAnonymousAllowed(c.req.path, env().NODE_ENV)) {
+      c.set('principal', anonymousPrincipal());
+      return next();
     }
 
-    return jsonError(c, 401, 'unauthorized');
+    return c.json({ error: 'unauthorized' }, 401);
   };
 };
-
-function jsonError(c: Context, status: 401 | 403 | 500, code: string) {
-  return c.json({ error: code }, status);
-}
