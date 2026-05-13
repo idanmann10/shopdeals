@@ -66,8 +66,8 @@ const SKIMLINKS_EXCLUDE = new Set([
   // Google's own shopping / search redirector pages aren't merchants —
   // Skimlinks won't pay on them and the wrapped URL looks spammy. We
   // surface the google.com URL unchanged so the agent can still render a
-  // working link; a future enrichment step will resolve to direct merchant
-  // URLs via SerpApi's google_product follow-up.
+  // working link; direct merchant URLs come from the SerpApi
+  // `google_immersive_product` follow-up handled in src/lib/serpapi.ts.
   'google.com',
   'google.co.uk',
 ]);
